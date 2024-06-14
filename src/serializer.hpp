@@ -92,6 +92,16 @@ public:
     void int32(uint32_t *data) { int32((int32_t *)data); }
     void int64(uint64_t *data) { int64((int64_t *)data); }
 
+    // FIXME: not portable
+    void float64(double *data)
+    {
+        if (reading) {
+            read(data, sizeof(double));
+        } else {
+            write(data, sizeof(double));
+        }
+    }
+
     // FIXME: use appropriate type serializers
     template<typename T> void vector(std::vector<T> data) {
         if (reading) {
