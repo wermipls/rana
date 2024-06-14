@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <cmath>
 #include <string>
@@ -265,7 +267,6 @@ Sample *load_sample(std::string path)
         std::vector<int16_t> data(len / sizeof(int16_t));
         std::memcpy(data.data(), buf, len);
         SDL_FreeWAV(buf);
-        fmt::print("{}", spec.freq);
         return new SampleMonoS16(data, spec.freq);
     } else {
         SDL_FreeWAV(buf);

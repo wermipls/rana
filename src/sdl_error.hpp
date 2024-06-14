@@ -1,13 +1,13 @@
 #pragma once
 
 #include <string>
-#include <fmt/core.h>
 #include <SDL2/SDL.h>
+#include "log.hpp"
 
 namespace rana {
 
-void sdl_error(std::string msg) {
-    fmt::println("{}: {}", SDL_GetError(), msg);
+void sdl_error(const std::string &msg) {
+    log::err("{} ({})", msg, SDL_GetError());
 }
 
 }
