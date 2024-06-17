@@ -6,8 +6,14 @@
 #include <pugixml.hpp>
 #include <cstdlib>
 #include <regex>
+#include <cmath>
 
 using namespace rana;
+
+double dB(double volume)
+{
+    return 20 * std::log10(volume);
+}
 
 double val_double(pugi::xml_node node, const char *name, double fallback)
 {
@@ -31,9 +37,33 @@ int val_int(pugi::xml_node node, const char *name, int fallback)
     }
 }
 
+int val_int_req(pugi::xml_node node, const char *name)
+{
+    try {
+        return std::stoi(node.child_value(name));
+    }
+    catch (const std::exception &e) {
+        log::err("could not parse %s, aborting...", name);
+        abort();
+    }
+}
+
 std::string val(pugi::xml_node node, const char *name)
 {
     return node.child_value(name);
+}
+
+bool val_bool(pugi::xml_node node, const char *name)
+{
+    std::string v = node.child_value(name); 
+    if (v == "true") {
+        return true;
+    } else if (v == "false") {
+        return false;
+    } else {
+        log::warn("could not resolve '%s' as boolean, assuming false");
+        return false;
+    }
 }
 
 struct EncodingHint {
@@ -182,6 +212,151 @@ musfmt::Sample parse_sample(pugi::xml_node &smp)
     return sample;
 }
 
+musfmt::MixerTrack parse_track(pugi::xml_node &t)
+{
+    musfmt::MixerTrack track{};
+    track.name = val(t, "Name");
+
+    auto soloed = val_bool(t, "Soloed");
+
+    auto mixer = t.child("FilterDevices").child("Devices").child("TrackMixerDevice");
+    auto is_active =  val_double(mixer.child("IsActive"),    "Value", 1.0) >= 1;
+    auto pre_pan    = val_double(mixer.child("Panning"),     "Value", 0.5);
+    auto pre_volume = val_double(mixer.child("Volume"),      "Value", 1.0);
+    track.pan    =    val_double(mixer.child("PostPanning"), "Value", 0.5);
+    track.volume =    val_double(mixer.child("PostVolume"),  "Value", 1.0);
+    auto surround =   val_double(mixer.child("Surround"),    "Value", 0.0);
+
+    if (soloed) {
+        log::warn("track is soloed");
+    }
+    if (!is_active) {
+        log::warn("track is not active");
+    }
+    if (pre_pan != 0.5) {
+        log::warn("pre pan is not supported");
+    }
+    if (pre_volume != 1.0) {
+        log::warn("pre volume is not supported");
+    }
+    if (surround > 0.0) {
+        log::warn("mixer track width parameter is unsupported");
+    }
+
+    return track;
+}
+
+musfmt::Mixer parse_mixer(pugi::xml_node &rnsong)
+{
+    musfmt::Mixer mixer{};
+
+    auto tracks = rnsong.child("Tracks").children("SequencerTrack");
+    for (auto &track : tracks) {
+        auto t = parse_track(track);
+        mixer.tracks.push_back(t);
+
+        log::info("track %d: '%s'", mixer.tracks.size(), t.name.c_str());
+        log::info("  volume: %.2f dB", t.volume);
+        log::info("  pan: %f",       t.pan);
+    }
+
+    auto master = rnsong.child("Tracks").child("SequencerMasterTrack");
+    auto master_device = master.child("FilterDevices")
+                               .child("Devices")
+                               .child("MasterTrackMixerDevice");
+    mixer.master_volume = val_double(master_device.child("PostVolume"), "Value", 1.0);
+    if (val_double(master_device.child("PostPanning"), "Value", 0.5) != 0.5) {
+        log::warn("panning on master? be serious");
+    }
+
+    return mixer;
+}
+
+uint8_t parse_note(pugi::xml_node note_column)
+{
+    std::string notestr = note_column.child_value("Note");
+    if (notestr.size() != 3) {
+        return 0xff;
+    }
+    if (notestr == "OFF") return 0;
+
+    char octstr[2] = {notestr[2], 0};
+    auto octave = std::stoi(octstr);
+    int note = 0;
+    switch (notestr[0]) {
+        case 'C': note = 0; break;
+        case 'D': note = 2; break;
+        case 'E': note = 4; break;
+        case 'F': note = 5; break;
+        case 'G': note = 7; break;
+        case 'A': note = 9; break;
+        case 'B': note = 11; break;
+        default:
+            log::err("could not parse note '%s'", notestr.c_str());
+            abort();
+    }
+    
+    if (notestr[1] == '#') {
+        note++;
+    }
+
+    return note + 1 + octave * 12;
+}
+
+void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
+{
+    auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
+    for (auto &pattern : patterns) {
+        auto lines = val_int_req(pattern, "NumberOfLines");
+        musfmt::Pattern p{};
+
+        for (auto &track : pattern.child("Tracks").children("PatternTrack")) {
+            musfmt::PatternTrack t{};
+            int prev_index[12] = {0};
+            for (auto &line : track.child("Lines").children("Line")) {
+                using enum rana::musfmt::CommandType;
+
+                auto line_index = line.attribute("index").as_int(0);
+                int col_i = 0;
+                for (auto &nc : line.child("NoteColumns").children("NoteColumn")) {
+                    if (t.col.size() < col_i + 1) {
+                        t.col.resize(t.col.size() + 1);
+                    }
+
+                    rana::musfmt::Command cmd{};
+
+                    if (auto delta = line_index - prev_index[col_i]; delta != 0) {
+                        if (delta < 0) {
+                            log::err("lines are not sequential, aborting...");
+                            abort();
+                        }
+
+                        cmd.type = SleepLines;
+                        cmd.param_xy = delta;
+                        t.col[col_i].rows.push_back(cmd);
+                    }
+
+                    if (auto note = parse_note(nc); note != 0xff) {
+                        cmd.type = Note;
+                        cmd.note = note;
+                        t.col[col_i].rows.push_back(cmd);
+                    }
+
+                    col_i++;
+                }
+            }
+            for (auto &c : t.col) {
+                log::info("note channel:");
+                for (auto &r : c.rows) {
+                    log::info("  %02x %02x", r.type, r.param);
+                }
+            }
+            p.tracks.push_back(t);
+        }
+        song.patterns.push_back(p);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 0) {
@@ -247,8 +422,8 @@ int main(int argc, char **argv)
             musfmt::Sample sample = parse_sample(smp);
 
             log::info("  sample: '%s'", val(smp, "Name").c_str());
-            log::info("    volume: %f", sample.volume);
-            log::info("    pan: %f", sample.pan);
+            log::info("    volume: %.2f dB", dB(sample.volume));
+            log::info("    pan: %.2f", sample.pan);
             log::info("    transpose: %d", sample.transpose);
             log::info("    fine: %d", sample.fine);
 
@@ -259,6 +434,9 @@ int main(int argc, char **argv)
     }
 
     find_sample_data(&zip, song);
+
+    song.mixer = parse_mixer(rnsong);
+    parse_patterns(rnsong, song);
 
     auto ser = Serializer();
     song.serialize(ser);

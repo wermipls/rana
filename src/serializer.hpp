@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <stdint.h>
 
 namespace rana {
@@ -115,6 +116,34 @@ public:
             uint32_t size = data.size() * sizeof(T);
             int32(&size);
             write(data.data(), size);
+        }
+    }
+
+    // a string of max 65535 characters
+    void string16(std::string &str) {
+        if (reading) {
+            uint16_t size;
+            int16(&size);
+            str.resize(size);
+            read(str.data(), size);
+        } else {
+            uint16_t size = str.size();
+            int16(&size);
+            write(str.data(), size);
+        }
+    }
+
+    // a string of max 255 characters
+    void string8(std::string &str) {
+        if (reading) {
+            uint8_t size;
+            int8(&size);
+            str.resize(size);
+            read(str.data(), size);
+        } else {
+            uint8_t size = str.size();
+            int8(&size);
+            write(str.data(), size);
         }
     }
 };

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string>
 #include <SDL2/SDL.h>
 #include "log.hpp"
 
 namespace rana {
 
-void sdl_error(const std::string &msg) {
+void sdl_error(const char *msg) {
     log::err("%s (%s)", msg, SDL_GetError());
 }
 
