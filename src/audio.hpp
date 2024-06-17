@@ -15,6 +15,9 @@ struct SampleStereo {
     float l, r;
 };
 
+constexpr Hz RnsVolumeSmoothing = 27.5;
+constexpr Hz RnsDeclickSmoothing = 110;
+
 static SDL_AudioDeviceID device;
 static SDL_AudioSpec device_spec;
 
@@ -58,6 +61,11 @@ double derive_1pole_factor(double freq)
 
     double y = 1. - cos(freq);
     return -y + sqrt(y*y + 2*y);
+}
+
+double factor_1pole(Hz freq, Hz sr)
+{
+    return derive_1pole_factor(normalize_frequency(freq, sr));
 }
 
 SampleStereo pan_equal_power(float pan)
@@ -133,8 +141,7 @@ public:
 
     void setCutoff(Hz freq)
     {
-        auto normalized = normalize_frequency(freq, sr);
-        coeff = derive_1pole_factor(normalized);
+        coeff = factor_1pole(freq, sr);
     }
 };
 
@@ -166,8 +173,7 @@ public:
 
     void setCutoff(Hz freq)
     {
-        auto normalized = normalize_frequency(freq, sr);
-        coeff = derive_1pole_factor(normalized);
+        coeff = factor_1pole(freq, sr);
     }
 };
 
@@ -364,8 +370,7 @@ public:
 
     void updateSmoothingFactor()
     {
-        auto freq_normalized = normalize_frequency(freq / smoothing_periods, sr);
-        smoothing_factor = derive_1pole_factor(freq_normalized);
+        factor_1pole(RnsVolumeSmoothing, sr);
     }
 
     void updateVolume()
@@ -423,7 +428,6 @@ class Sampler : Generator {
     float t = 0;
     float volume_target;
     float smoothing_factor;
-    float smoothing_periods = 4.0;
     SampleStereo pan_factors;
     bool is_eqp;
     SampleStereo prev_sample{};
@@ -434,12 +438,6 @@ class Sampler : Generator {
     size_t loop_end = 0;
     InterpolationMethod interpolation;
 
-    void updateSmoothingFactor()
-    {
-        auto freq_normalized = normalize_frequency(freq / smoothing_periods, sr);
-        smoothing_factor = derive_1pole_factor(freq_normalized);
-    }
-
     void updateVolume()
     {
         volume += (volume_target - volume) * smoothing_factor; 
@@ -449,12 +447,13 @@ public:
     Sampler(Sample *sample, Hz freq = 440, float volume = 1.0, bool equal_power = true, InterpolationMethod interpolation = Hybrid) {
         this->sample = sample;
         sr = sample->getSampleRate();
-        this->smoothing_periods = smoothing_periods;
         this->volume = 0.f;
         volume_target = volume;
         this->interpolation = interpolation;
         setFrequency(freq);
         setPan(0);
+
+        smoothing_factor = factor_1pole(RnsVolumeSmoothing, sr);
     }
 
     std::vector<SampleStereo> getSamples(size_t n_samples)
@@ -494,12 +493,7 @@ public:
     }
 
     void setVolume(float volume) { this->volume_target = volume; }
-
-    void setFrequency(Hz freq)
-    {
-        this->freq = freq;
-        updateSmoothingFactor();
-    }
+    void setFrequency(Hz freq) { this->freq = freq; }
 
     void setPan(float pan)
     {
