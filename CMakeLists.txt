@@ -9,13 +9,12 @@ if(NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     file(GENERATE OUTPUT .gitignore CONTENT "*")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 #set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*")
 
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
-find_package(fmt)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUA REQUIRED luajit)
@@ -29,8 +28,8 @@ add_executable(rana WIN32
     src/gfx.cpp
 )
 
-target_link_libraries(rana -static -fdiagnostics-color=always)
-target_compile_options(rana PRIVATE -ggdb -O3 -fdiagnostics-color=always)
+target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
+target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_libraries(rana -fansi-escape-codes)
@@ -50,7 +49,6 @@ if(TARGET SDL2::SDL2main)
 endif()
 target_link_libraries(rana SDL2::SDL2-static)
 
-target_link_libraries(rana fmt::fmt-header-only)
 
 target_link_libraries(rana ${LUA_LIBRARIES})
 target_include_directories(rana PUBLIC ${LUA_INCLUDE_DIRS})

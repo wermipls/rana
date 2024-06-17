@@ -4,7 +4,6 @@
 #include <cmath>
 #include <string>
 #include <cstring>
-#include <fmt/core.h>
 #include <SDL2/SDL.h>
 
 namespace rana {
@@ -83,6 +82,7 @@ public:
     virtual void setVolume(float volume) = 0;
     virtual void setFrequency(Hz freq) = 0;
     virtual void setPan(float pan) = 0;
+    virtual ~Generator() = default;
 };
 
 class Sample {

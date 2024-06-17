@@ -7,11 +7,51 @@
 namespace rana {
 namespace musfmt {
 
+enum Interpolation : uint8_t {
+    Linear,
+    None,
+    Hybrid,
+};
+
+enum LoopMode : uint8_t {
+    Off,
+    OneShot,
+    Forward,
+    Backward,
+    PingPong,
+};
+
+enum Codec : uint8_t {
+    FLAC,
+    Opus,
+};
+
+// 0 = no sample,
+// positive = module sample index,
+// negative = global sample pool
+typedef int32_t SampleDataID;
+
+struct SampleData : public Serializable {
+    Codec codec;
+    std::vector<uint8_t> data;
+
+    virtual void serialize(Serializer &s)
+    {
+        s.int8((uint8_t *)&codec);
+        s.vector(data);
+    }
+};
+
 struct Sample : public Serializable {
     double volume;
     double pan;
     int8_t transpose;
     int8_t fine;
+    Interpolation interpolation;
+    LoopMode loop_mode;
+    uint32_t loop_start;
+    uint32_t loop_end;
+    SampleDataID sampledata_id;
 
     virtual void serialize(Serializer &s)
     {
@@ -19,6 +59,11 @@ struct Sample : public Serializable {
         s.float64(&pan);
         s.int8(&transpose);
         s.int8(&fine);
+        s.int8((uint8_t *)&interpolation);
+        s.int8((uint8_t *)&loop_mode);
+        s.int32(&loop_start);
+        s.int32(&loop_end);
+        s.int32(&sampledata_id);
     }
 };
 

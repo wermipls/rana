@@ -1,26 +1,30 @@
 #pragma once
 
-#include <fmt/core.h>
+#include <format>
+#include <cstdio>
 
 namespace rana {
 namespace log {
 
 template <typename... T>
-void info(fmt::format_string<T...> fmt, T&&... args)
+void info(std::format_string<T...> fmt, T&&... args)
 {
-    fmt::println(stderr, fmt, std::forward<T>(args)...);
+    std::fputs(std::format(fmt, std::forward<T>(args)...).c_str(), stderr);
+    std::fputs("\n", stderr);
 }
 
 template <typename... T>
-void warn(fmt::format_string<T...> fmt, T&&... args)
+void warn(std::format_string<T...> fmt, T&&... args)
 {
-    fmt::println(stderr, "warn: {}", fmt::format(fmt, std::forward<T>(args)...));
+    std::fputs("warn: ", stderr);
+    info(fmt, std::forward<T>(args)...);
 }
 
 template <typename... T>
-void err(fmt::format_string<T...> fmt, T&&... args)
+void err(std::format_string<T...> fmt, T&&... args)
 {
-    fmt::println(stderr, "err: {}", fmt::format(fmt, std::forward<T>(args)...));
+    std::fputs("err: ", stderr);
+    info(fmt, std::forward<T>(args)...);
 }
 
 }

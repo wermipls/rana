@@ -7,9 +7,8 @@ if(NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     file(GENERATE OUTPUT .gitignore CONTENT "*")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
-find_package(fmt)
 find_package(pugixml)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -34,6 +33,5 @@ else()
   target_compile_options(corn PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-target_link_libraries(corn fmt::fmt-header-only)
 target_link_libraries(corn pugixml::pugixml)
 

@@ -10,6 +10,7 @@ class Serializer;
 class Serializable {
 public:
     virtual void serialize(Serializer &s) = 0;
+    virtual ~Serializable() = default;
 };
 
 class Serializer {
@@ -42,6 +43,7 @@ public:
 
     Serializer(std::vector<uint8_t> data)
     {
+        reading = true;
         buffer = data;
         position = 0;
     }

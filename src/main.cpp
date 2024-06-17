@@ -2,7 +2,6 @@
 #include "gfx.hpp"
 #include "audio.hpp"
 #include "serializer.hpp"
-#include <fmt/core.h>
 
 int main(int argc, char **argv)
 {
