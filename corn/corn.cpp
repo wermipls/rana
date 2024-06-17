@@ -15,7 +15,7 @@ double val_double(pugi::xml_node node, const char *name, double fallback)
         return std::stod(node.child_value(name));
     }
     catch (const std::invalid_argument &e) {
-        log::warn("could not parse {}, using fallback value {}", name, fallback);
+        log::warn("could not parse %s, using fallback value %f", name, fallback);
         return fallback;
     }
 }
@@ -26,7 +26,7 @@ int val_int(pugi::xml_node node, const char *name, int fallback)
         return std::stoi(node.child_value(name));
     }
     catch (const std::invalid_argument &e) {
-        log::warn("could not parse {}, using fallback value {}", name, fallback);
+        log::warn("could not parse %s, using fallback value %d", name, fallback);
         return fallback;
     }
 }
@@ -60,7 +60,7 @@ bool encoding_hint(const std::string &sample_name, EncodingHint &hint)
             } else if (qstr.back() == 'k') {
                 hint.quality_is_bitrate = true;
             } else {
-                log::warn("quality specifier '{}' should be of format 'q50' or '50k'", qstr);
+                log::warn("quality specifier '%s' should be of format 'q50' or '50k'", qstr.c_str());
             }
             try {
                 hint.quality = std::stoi(qstr);
@@ -86,7 +86,7 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
 
     for (mz_uint i = 0; i < filecount; i++) {
         if (!mz_zip_reader_file_stat(zip, i, &stat)) {
-            log::warn("failed to stat archive entry {}: {}",
+            log::warn("failed to stat archive entry %d: %s",
                 i, mz_zip_get_error_string(mz_zip_get_last_error(zip))
             );
             continue;
@@ -101,23 +101,23 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
             auto name = match[3].str();
             auto ext = match[4].str();
 
-            log::info("instrument {}, sample {}: '{}.{}'", ins_i, smp_i, name, ext);
+            log::info("instrument %d, sample %d: '%s.%s'", ins_i, smp_i, name.c_str(), ext.c_str());
             if (EncodingHint hint; encoding_hint(name, hint)) {
-                log::info("    encoding hint: {} {}", hint.codec, hint.quality);
+                log::info("    encoding hint: %s %d", hint.codec.c_str(), hint.quality);
             }
 
             musfmt::SampleData sd{};
             if (ext == "flac") {
                 sd.codec = musfmt::Codec::FLAC;
             } else {
-                log::warn("unrecognized sample format '{}', ignoring...", ext);
+                log::warn("unrecognized sample format '%s', ignoring...", ext.c_str());
                 continue;
             }
 
             auto bytes = stat.m_uncomp_size;
             sd.data.resize(bytes);
             if (!mz_zip_reader_extract_to_mem(zip, i, sd.data.data(), sd.data.size(), 0)) {
-                log::err("failed to extract sample: {}",
+                log::err("failed to extract sample: %s",
                     mz_zip_get_error_string(mz_zip_get_last_error(zip))
                 );
                 continue;
@@ -146,7 +146,7 @@ musfmt::Sample parse_sample(pugi::xml_node &smp)
     } else if (imode == "None") {
         sample.interpolation = None;
     } else {
-        log::warn("unsupported interpolation mode '{}', using Linear as fallback", imode);
+        log::warn("unsupported interpolation mode '%s', using Linear as fallback", imode.c_str());
         sample.interpolation = Linear;
     }
     if (sample.interpolation == None && val(smp, "Oversample") == "true") {
@@ -164,7 +164,7 @@ musfmt::Sample parse_sample(pugi::xml_node &smp)
     } else if (loopmode == "PingPong") {
         sample.loop_mode = PingPong;
     } else {
-        log::warn("unsupported loop mode '{}', using Off as fallback", loopmode);
+        log::warn("unsupported loop mode '%s', using Off as fallback", loopmode.c_str());
         sample.loop_mode = Off;
     }
 
@@ -196,13 +196,13 @@ int main(int argc, char **argv)
     char *infile = argv[1];
     char *outfile = argv[2];
 
-    log::info("working on file '{}'", infile);
+    log::info("working on file '%s'", infile);
 
     size_t xml_len;
 
     mz_zip_archive zip = {};
     if (!mz_zip_reader_init_file(&zip, infile, 0)) {
-        log::err("failed to open archive: {}",
+        log::err("failed to open archive: %s",
             mz_zip_get_error_string(mz_zip_get_last_error(&zip))
         );
         return -1;
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     char *xml = (char *)mz_zip_reader_extract_file_to_heap(&zip, "Song.xml", &xml_len, 0);
 
     if (xml == nullptr) {
-        log::err("failed to read Song.xml from the archive: {}",
+        log::err("failed to read Song.xml from the archive: %s",
             mz_zip_get_error_string(mz_zip_get_last_error(&zip))
         );
         return -1;
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
     if (result) {
         log::info("parsing xml OK");
     } else {
-        log::err("failed to parse xml: {}", result.description());
+        log::err("failed to parse xml: %s", result.description());
         return -1;
     }
 
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
     for (auto ins : rnsong.child("Instruments").children("Instrument")) {
         auto name = val(ins, "Name");
 
-        log::info("parsing instrument {}: '{}'", ins_count, name);
+        log::info("parsing instrument %d: '%s'", ins_count, name.c_str());
         ins_count++;
 
         struct musfmt::Instrument instrument = {};
@@ -246,11 +246,11 @@ int main(int argc, char **argv)
         for (auto smp : ins.child("SampleGenerator").child("Samples").children("Sample")) {
             musfmt::Sample sample = parse_sample(smp);
 
-            log::info("  sample: '{}'", val(smp, "Name"));
-            log::info("    volume: {}", sample.volume);
-            log::info("    pan: {}", sample.pan);
-            log::info("    transpose: {}", sample.transpose);
-            log::info("    fine: {}", sample.fine);
+            log::info("  sample: '%s'", val(smp, "Name").c_str());
+            log::info("    volume: %f", sample.volume);
+            log::info("    pan: %f", sample.pan);
+            log::info("    transpose: %d", sample.transpose);
+            log::info("    fine: %d", sample.fine);
 
             instrument.smp.push_back(sample);
         }
@@ -263,10 +263,10 @@ int main(int argc, char **argv)
     auto ser = Serializer();
     song.serialize(ser);
 
-    log::info("writing output to '{}'...", outfile);
+    log::info("writing output to '%s'...", outfile);
     auto serialized = ser.data();
     auto bytes = rana::writefile(serialized, outfile);
-    log::info("wrote {} bytes.", bytes);
+    log::info("wrote %d bytes.", bytes);
 
     std::free(xml);
     return 0;

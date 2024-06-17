@@ -7,7 +7,7 @@
 namespace rana {
 
 void sdl_error(const std::string &msg) {
-    log::err("{} ({})", msg, SDL_GetError());
+    log::err("%s (%s)", msg, SDL_GetError());
 }
 
 }
