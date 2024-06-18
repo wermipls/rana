@@ -370,7 +370,7 @@ public:
 
     void updateSmoothingFactor()
     {
-        factor_1pole(RnsVolumeSmoothing, sr);
+        smoothing_factor = factor_1pole(RnsVolumeSmoothing, sr);
     }
 
     void updateVolume()

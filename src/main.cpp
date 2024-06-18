@@ -1,7 +1,10 @@
 #include <SDL2/SDL.h>
 #include "gfx.hpp"
 #include "audio.hpp"
+#include "music_player.hpp"
 #include "serializer.hpp"
+#include "log.hpp"
+#include "fio.hpp"
 
 int main(int argc, char **argv)
 {
@@ -10,13 +13,24 @@ int main(int argc, char **argv)
     }
 
     auto ctx = rana::gfx::Context();
-    auto osc = rana::audio::Sine(44100, 440, 0.0, 4.0);
+    auto osc = rana::audio::Saw(44100, 440, 0.0, 4.0);
     rana::audio::init(44100);
 
     auto sample = rana::audio::load_sample("C:\\Users\\lea\\Music\\loop_repro_test.wav");
     if (sample == nullptr) {
         return -1;
     }
+
+    std::vector<uint8_t> mus;
+    if (!rana::readfile(mus, "out.ranamus")) {
+        rana::log::err("failed to read music file...");
+        return -1;
+    };
+    auto song = rana::musfmt::Song();
+    auto songser = rana::Serializer(mus);
+    song.serialize(songser);
+
+    auto player = rana::audio::MusicPlayer(song, 44100);
 
     sample->setLooping(true);
     auto sampler = rana::audio::Sampler(
@@ -70,8 +84,8 @@ int main(int argc, char **argv)
         }
 
         if (rana::audio::needs_more_data()) {
-            //rana::audio::queue(osc.getSamples(256));
-            rana::audio::queue(lp.process(sampler.getSamples(256)));
+            rana::audio::queue(player.getSamples(32));
+            //rana::audio::queue(lp.process(sampler.getSamples(256)));
             //rana::audio::queue(track.getSamples(256));
             ticks+=10;
         } else {
@@ -79,7 +93,7 @@ int main(int argc, char **argv)
             continue;
         }
         if ((ticks % 1000) > 500) {
-            osc.setVolume(0.1);
+            osc.setVolume(0.0);
         } else {
             osc.setVolume(0.7);
         }
@@ -91,7 +105,7 @@ int main(int argc, char **argv)
         sampler.setFrequency(440+std::cos(ticks / 2000.f) * 50.f);
 
         osc.setFrequency(300+std::cos(ticks / 2000.f) * 250.f);
-        osc.setPan(std::cos(ticks / 4000.f));
+        //osc.setPan(std::cos(ticks / 4000.f));
     }
 
     return 0;

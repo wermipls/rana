@@ -334,6 +334,7 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.type = SleepLines;
                         cmd.param_xy = delta;
                         t.col[col_i].rows.push_back(cmd);
+                        prev_index[col_i] = line_index;
                     }
 
                     if (auto note = parse_note(nc); note >= 0) {
