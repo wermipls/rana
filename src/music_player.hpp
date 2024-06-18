@@ -24,12 +24,10 @@ class MusicPlayer {
     int ticks_line;
     int lines_beat;
 
-    int cur_line = 0;
-    int cur_tick = 0;
-    float t = 0;
+    float lines_left = 0;
 
     int cmd_i = 0;
-    float sleep_ticks = 0;
+    float sleep_lines = 0;
     Saw saw;
 
     void recalculateSamplesTick()
@@ -43,6 +41,7 @@ public:
         bpm = song.bpm;
         ticks_line = song.line_ticks;
         lines_beat = song.beat_lines;
+        lines_left = song.patterns[0].lines;
         recalculateSamplesTick();
     }
 
@@ -59,14 +58,19 @@ public:
                 }
                 break;
             case SleepLines:
-                sleep_ticks += ticks_line * cmd.param_xy;
+                sleep_lines += cmd.param_xy;
                 break;
         }
     }
 
     void doSequence(size_t samples)
     {
-        while (sleep_ticks <= 0) {
+        if (lines_left <= 0) {
+            lines_left += song.patterns[0].lines;
+            cmd_i = 0;
+            sleep_lines = 0;
+        }
+        while (sleep_lines <= 0) {
             auto &rows = song.patterns[0].tracks[0].col[0].rows;
             if (cmd_i < rows.size()) {
                 auto cmd = rows[cmd_i];
@@ -77,7 +81,8 @@ public:
             }
         }
 
-        sleep_ticks -= samples / samples_tick;
+        sleep_lines -= samples / samples_tick / (float)ticks_line;
+        lines_left -= samples / samples_tick / (float)ticks_line;
     }
 
     std::vector<SampleStereo> getSamples(size_t n_samples)

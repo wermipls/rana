@@ -170,6 +170,7 @@ struct PatternTrack {
 };
 struct Pattern : public Serializable {
     std::vector<PatternTrack> tracks;
+    uint16_t lines;
 
     virtual void serialize(Serializer &s)
     {
@@ -179,6 +180,8 @@ struct Pattern : public Serializable {
         for (auto &n : tracks) {
             n.serialize(s);
         }
+
+        s.int16(&lines);
     }
 };
 

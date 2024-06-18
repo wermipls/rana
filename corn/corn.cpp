@@ -307,8 +307,8 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 {
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
     for (auto &pattern : patterns) {
-        auto lines = val_int_req(pattern, "NumberOfLines");
         musfmt::Pattern p{};
+        p.lines = val_int_req(pattern, "NumberOfLines");
 
         for (auto &track : pattern.child("Tracks").children("PatternTrack")) {
             musfmt::PatternTrack t{};
