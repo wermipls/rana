@@ -1,0 +1,45 @@
+#pragma once
+
+#include <math.h>
+
+namespace rana {
+namespace audio {
+
+typedef double Hz;
+
+struct SampleStereo {
+    float l, r;
+};
+
+double normalize_frequency(Hz freq, Hz sr)
+{
+    return freq * 2. * M_PI / sr; 
+}
+
+double derive_1pole_factor(double freq)
+{
+    // assumes normalized angular frequency
+    // https://dsp.stackexchange.com/a/54088
+
+    double y = 1. - cos(freq);
+    return -y + sqrt(y*y + 2*y);
+}
+
+double factor_1pole(Hz freq, Hz sr)
+{
+    return derive_1pole_factor(normalize_frequency(freq, sr));
+}
+
+SampleStereo pan_equal_power(float pan)
+{
+    pan += 1.f;
+    pan *= M_PI / 4;
+
+    return SampleStereo{
+        std::sin(pan),
+        std::cos(pan)
+    };
+}
+
+}
+}

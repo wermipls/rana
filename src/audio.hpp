@@ -5,15 +5,11 @@
 #include <string>
 #include <cstring>
 #include <SDL2/SDL.h>
+#include "audio_common.hpp"
+#include "audio_effects.hpp"
 
 namespace rana {
 namespace audio {
-
-typedef double Hz;
-
-struct SampleStereo {
-    float l, r;
-};
 
 constexpr Hz RnsVolumeSmoothing = 27.5;
 constexpr Hz RnsDeclickSmoothing = 110;
@@ -49,36 +45,6 @@ bool needs_more_data()
     return false;
 }
 
-double normalize_frequency(Hz freq, Hz sr)
-{
-    return freq * 2. * M_PI / sr; 
-}
-
-double derive_1pole_factor(double freq)
-{
-    // assumes normalized angular frequency
-    // https://dsp.stackexchange.com/a/54088
-
-    double y = 1. - cos(freq);
-    return -y + sqrt(y*y + 2*y);
-}
-
-double factor_1pole(Hz freq, Hz sr)
-{
-    return derive_1pole_factor(normalize_frequency(freq, sr));
-}
-
-SampleStereo pan_equal_power(float pan)
-{
-    pan += 1.f;
-    pan *= M_PI / 4;
-
-    return SampleStereo{
-        std::sin(pan),
-        std::cos(pan)
-    };
-}
-
 class Generator {
 protected:
     float sr = 44100;
@@ -107,74 +73,6 @@ public:
     virtual void setLooping(bool is_looping) = 0;
     virtual void setReverse(bool reversed) = 0;
     virtual double getSampleRate() = 0;
-};
-
-class Effect {
-public:
-    virtual std::vector<SampleStereo> process(std::vector<SampleStereo> in) = 0;
-};
-
-class Lowpass : public Effect {
-    Hz sr;
-    float coeff = 0;
-    SampleStereo q{};
-
-public:
-    Lowpass(Hz sample_rate = 44100, Hz freq = 3000)
-    {
-        sr = sample_rate;
-        setCutoff(freq);
-    }
-
-    std::vector<SampleStereo> process(std::vector<SampleStereo> in)
-    {
-        std::vector<SampleStereo> out(in.size());
-
-        for (size_t i = 0; i < in.size(); i++) {
-            q.l += (in[i].l - q.l) * coeff;
-            q.r += (in[i].r - q.r) * coeff;
-            out[i] = q;
-        }
-
-        return out;
-    }
-
-    void setCutoff(Hz freq)
-    {
-        coeff = factor_1pole(freq, sr);
-    }
-};
-
-class Highpass : public Effect {
-    Hz sr;
-    float coeff = 0;
-    SampleStereo q{};
-
-public:
-    Highpass(Hz sample_rate = 44100, Hz freq = 3000)
-    {
-        sr = sample_rate;
-        setCutoff(freq);
-    }
-
-    std::vector<SampleStereo> process(std::vector<SampleStereo> in)
-    {
-        std::vector<SampleStereo> out(in.size());
-
-        for (size_t i = 0; i < in.size(); i++) {
-            q.l += (in[i].l - q.l) * coeff;
-            q.r += (in[i].r - q.r) * coeff;
-            out[i].l = in[i].l - q.l;
-            out[i].r = in[i].r - q.r;
-        }
-
-        return out;
-    }
-
-    void setCutoff(Hz freq)
-    {
-        coeff = factor_1pole(freq, sr);
-    }
 };
 
 class Track {
