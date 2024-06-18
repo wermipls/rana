@@ -272,11 +272,11 @@ musfmt::Mixer parse_mixer(pugi::xml_node &rnsong)
     return mixer;
 }
 
-uint8_t parse_note(pugi::xml_node note_column)
+int parse_note(pugi::xml_node note_column)
 {
     std::string notestr = note_column.child_value("Note");
     if (notestr.size() != 3) {
-        return 0xff;
+        return -1;
     }
     if (notestr == "OFF") return 0;
 
@@ -336,7 +336,7 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         t.col[col_i].rows.push_back(cmd);
                     }
 
-                    if (auto note = parse_note(nc); note != 0xff) {
+                    if (auto note = parse_note(nc); note >= 0) {
                         cmd.type = Note;
                         cmd.note = note;
                         t.col[col_i].rows.push_back(cmd);
