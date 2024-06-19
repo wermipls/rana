@@ -1,7 +1,8 @@
 #include "music_format.hpp"
 #include "audio.hpp"
-#include "log.hpp"
+#include "audio_samples.hpp"
 #include <cmath>
+#include <memory>
 
 namespace rana {
 namespace audio {
@@ -20,45 +21,6 @@ Hz freqFromNote(uint8_t note)
 
     return tuning_A4 * intervalFromSemi(interval);
 }
-
-struct DecodedSample {
-    std::vector<SampleStereo> data;
-    float rate;
-};
-
-std::unique_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
-{
-    auto df = drflac_open_memory(s.data(), s.size(), NULL);
-    auto frames = df->totalPCMFrameCount;
-    auto channels = df->channels;
-    auto buf = std::vector<float>(df->totalPCMFrameCount * df->channels);
-
-    auto f = drflac_read_pcm_frames_f32(df, buf.size(), buf.data());
-    drflac_close(df);
-
-    auto decoded = std::make_unique<DecodedSample>();
-    decoded->rate = df->sampleRate;
-
-    auto &out = decoded->data;
-    out.resize(f);
-
-    if (channels == 1) {
-        for (size_t i = 0; i < frames; i++) {
-            out[i].l = buf[i];
-            out[i].r = buf[i];
-        }
-    } else if (channels == 2) {
-        for (size_t i = 0; i < frames; i++) {
-            out[i].l = buf[i*2];
-            out[i].r = buf[i*2+1];
-        }
-    } else {
-        log::err("unsupported flac channel count: %d", df->channels);
-        return nullptr;
-    }
-
-    return decoded;
-};
 
 struct PlaybackSample {
     DecodedSample *s;
@@ -352,8 +314,8 @@ public:
         channel.getSamples(samples);
 
         for (auto &n : samples) {
-            n.l *= 0.2;
-            n.r *= 0.2;
+            n.l *= 0.5;
+            n.r *= 0.5;
         }
 
         return samples;

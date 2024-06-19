@@ -6,75 +6,50 @@
 #include <memory>
 
 #include "audio_common.hpp"
+#define DR_FLAC_IMPLEMENTATION
+#include "dr_flac.h"
+#include "log.hpp"
 
 namespace rana {
 namespace audio {
 
-class Sample {
-protected:
-    bool looped = false;
-    bool reverse = false;
-    size_t position = 0;
-
-public:
-    size_t loop_start = 0;
-    size_t loop_end = 0;
-    virtual std::vector<SampleStereo> getSamples(size_t n_samples) = 0;
-    virtual void seek(float pos) = 0;
-    virtual void setLooping(bool is_looping) = 0;
-    virtual void setReverse(bool reversed) = 0;
-    virtual double getSampleRate() = 0;
+struct DecodedSample {
+    std::vector<SampleStereo> data;
+    float rate;
 };
 
-class SampleMonoS16 : public Sample {
-    std::shared_ptr<std::vector<int16_t>> data;
-    Hz sr;
+std::unique_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
+{
+    auto df = drflac_open_memory(s.data(), s.size(), NULL);
+    auto frames = df->totalPCMFrameCount;
+    auto channels = df->channels;
+    auto buf = std::vector<float>(df->totalPCMFrameCount * df->channels);
 
-public:
-    SampleMonoS16(std::shared_ptr<std::vector<int16_t>> data, Hz sample_rate)
-    {
-        this->data = data;
-        loop_end = data->size() - 1;
-        sr = sample_rate;
-    }
+    auto f = drflac_read_pcm_frames_f32(df, buf.size(), buf.data());
+    drflac_close(df);
 
-    std::vector<SampleStereo> getSamples(size_t n_samples)
-    {
-        std::vector<SampleStereo> buf(n_samples);
-        int16_t *d = data->data(); 
-        auto size = data->size();
+    auto decoded = std::make_unique<DecodedSample>();
+    decoded->rate = df->sampleRate;
 
-        for (auto &s : buf) {
-            if (position >= size) {
-                continue;
-            }
-            s.l = s.r = d[position] / (float)INT16_MAX;
+    auto &out = decoded->data;
+    out.resize(f);
 
-            if (!reverse) {
-                position++;
-                if (looped && position >= loop_end) {
-                    position = loop_start;
-                }
-            } else {
-                position--;
-                if (looped && position <= loop_start) {
-                    position = loop_end;
-                }
-            }
+    if (channels == 1) {
+        for (size_t i = 0; i < frames; i++) {
+            out[i].l = buf[i];
+            out[i].r = buf[i];
         }
-
-        return buf;
+    } else if (channels == 2) {
+        for (size_t i = 0; i < frames; i++) {
+            out[i].l = buf[i*2];
+            out[i].r = buf[i*2+1];
+        }
+    } else {
+        log::err("unsupported flac channel count: %d", df->channels);
+        return nullptr;
     }
 
-    void seek(float pos)
-    {
-        pos = std::fminf(std::fmaxf(pos, 0.0), 1.0);
-        position = pos * (data->size()-1);
-    }
-
-    void setLooping(bool is_looping) { looped = is_looping; };
-    void setReverse(bool reversed) { reverse = reversed; };
-    Hz getSampleRate() { return sr; }
+    return decoded;
 };
 
 }

@@ -7,9 +7,6 @@
 #include <SDL2/SDL.h>
 #include "audio_common.hpp"
 #include "audio_effects.hpp"
-#include "audio_samples.hpp"
-#define DR_FLAC_IMPLEMENTATION
-#include "dr_flac.h"
 #include "log.hpp"
 
 namespace rana {
@@ -39,43 +36,6 @@ void init(int sample_rate)
 void queue(std::vector<SampleStereo> samples)
 {
     SDL_QueueAudio(device, samples.data(), samples.size() * sizeof(SampleStereo));
-}
-
-Sample *load_sample(std::string path)
-{
-    // fixme: no error handling...
-    SDL_AudioSpec spec;
-    uint8_t *buf;
-    uint32_t len;
-
-    SDL_LoadWAV(path.c_str(), &spec, &buf, &len);
-
-    if (spec.format == AUDIO_S16 && spec.channels == 1) {
-        auto data = std::make_shared<std::vector<int16_t>>(len / sizeof(int16_t));
-        std::memcpy(data->data(), buf, len);
-        SDL_FreeWAV(buf);
-        return new SampleMonoS16(data, spec.freq);
-    } else {
-        SDL_FreeWAV(buf);
-    }
-    return nullptr;
-}
-
-SampleMonoS16 *load_flac(uint8_t *data, size_t size)
-{
-    auto df = drflac_open_memory(data, size, NULL);
-    if (df->channels == 1) {
-        auto data = std::make_shared<std::vector<int16_t>>(df->totalPCMFrameCount);
-        auto f = drflac_read_pcm_frames_s16(df, data->size(), data->data());
-        log::info("pcm frames: %d", f);
-        auto sample = new SampleMonoS16(data, df->sampleRate);
-        drflac_close(df);
-        return sample;
-    } else {
-        log::err("unsupported flac channel count: %d", df->channels);
-        drflac_close(df);
-        return nullptr;
-    }
 }
 
 bool needs_more_data()
@@ -270,100 +230,6 @@ public:
         }
     }
 };
-
-enum InterpolationMethod {
-    None,
-    Hybrid,
-    Linear,
-};
-
-class Sampler : Generator {
-    float t = 0;
-    float volume_target;
-    float smoothing_factor;
-    SampleStereo pan_factors;
-    bool is_eqp;
-    SampleStereo prev_sample{};
-    std::vector<SampleStereo> buffer;
-    size_t buffer_pos = 0;
-    Sample *sample;
-    size_t loop_start = 0;
-    size_t loop_end = 0;
-    InterpolationMethod interpolation;
-
-    void updateVolume()
-    {
-        volume += (volume_target - volume) * smoothing_factor; 
-    }
-
-public:
-    Sampler(Sample *sample, Hz freq = 440, float volume = 1.0, bool equal_power = true, InterpolationMethod interpolation = Hybrid) {
-        this->sample = sample;
-        sr = sample->getSampleRate();
-        this->volume = 0.f;
-        volume_target = volume;
-        this->interpolation = interpolation;
-        setFrequency(freq);
-        setPan(0);
-
-        smoothing_factor = factor_1pole(RnsVolumeSmoothing, sr);
-    }
-
-    std::vector<SampleStereo> getSamples(size_t n_samples)
-    {
-        auto buf = std::vector<SampleStereo>(n_samples);
-
-        for (auto &a : buf) {
-            updateVolume();
-            while (buffer_pos >= buffer.size()) {
-                buffer_pos -= buffer.size();
-                buffer = sample->getSamples(64);
-            }
-            auto smp = buffer[buffer_pos];
-            float tt = t;
-            if (interpolation == None) {
-                tt = 0;
-            }
-            a.l = smp.l * tt + prev_sample.l * (1.f - tt);
-            a.r = smp.r * tt + prev_sample.r * (1.f - tt);
-            a.l *= volume * pan_factors.l;
-            a.r *= volume * pan_factors.r;
-            if (interpolation != Linear) {
-                prev_sample = smp;
-            }
-
-            t += freq / 261.6255f; //FIXME
-            while (t > 1.f) {
-                t -= 1.f;
-                buffer_pos++;
-                if (interpolation == Linear) {
-                    prev_sample = smp;
-                }
-            }
-        }
-
-        return buf;
-    }
-
-    void setVolume(float volume) { this->volume_target = volume; }
-    void setFrequency(Hz freq) { this->freq = freq; }
-
-    void setPan(float pan)
-    {
-        if (is_eqp) {
-            this->pan_factors = pan_equal_power(pan);
-        } else {
-            if (pan < 0) {
-                pan_factors.l = 1; 
-                pan_factors.r = 1.f + pan;
-            } else {
-                pan_factors.l = 1.f - pan;
-                pan_factors.r = 1; 
-            }
-        }
-    }
-};
-
 
 }
 }
