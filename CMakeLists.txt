@@ -28,6 +28,7 @@ add_executable(rana WIN32
     src/gfx.cpp
 )
 
+target_include_directories(rana PRIVATE external)
 target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)
 

@@ -7,6 +7,10 @@
 #include <SDL2/SDL.h>
 #include "audio_common.hpp"
 #include "audio_effects.hpp"
+#include "audio_samples.hpp"
+#define DR_FLAC_IMPLEMENTATION
+#include "dr_flac.h"
+#include "log.hpp"
 
 namespace rana {
 namespace audio {
@@ -37,6 +41,43 @@ void queue(std::vector<SampleStereo> samples)
     SDL_QueueAudio(device, samples.data(), samples.size() * sizeof(SampleStereo));
 }
 
+Sample *load_sample(std::string path)
+{
+    // fixme: no error handling...
+    SDL_AudioSpec spec;
+    uint8_t *buf;
+    uint32_t len;
+
+    SDL_LoadWAV(path.c_str(), &spec, &buf, &len);
+
+    if (spec.format == AUDIO_S16 && spec.channels == 1) {
+        auto data = std::make_shared<std::vector<int16_t>>(len / sizeof(int16_t));
+        std::memcpy(data->data(), buf, len);
+        SDL_FreeWAV(buf);
+        return new SampleMonoS16(data, spec.freq);
+    } else {
+        SDL_FreeWAV(buf);
+    }
+    return nullptr;
+}
+
+SampleMonoS16 *load_flac(uint8_t *data, size_t size)
+{
+    auto df = drflac_open_memory(data, size, NULL);
+    if (df->channels == 1) {
+        auto data = std::make_shared<std::vector<int16_t>>(df->totalPCMFrameCount);
+        auto f = drflac_read_pcm_frames_s16(df, data->size(), data->data());
+        log::info("pcm frames: %d", f);
+        auto sample = new SampleMonoS16(data, df->sampleRate);
+        drflac_close(df);
+        return sample;
+    } else {
+        log::err("unsupported flac channel count: %d", df->channels);
+        drflac_close(df);
+        return nullptr;
+    }
+}
+
 bool needs_more_data()
 {
     uint32_t queue = SDL_GetQueuedAudioSize(device);
@@ -57,22 +98,6 @@ public:
     virtual void setFrequency(Hz freq) = 0;
     virtual void setPan(float pan) = 0;
     virtual ~Generator() = default;
-};
-
-class Sample {
-protected:
-    bool looped = false;
-    bool reverse = false;
-    size_t loop_start = 0;
-    size_t loop_end = 0;
-    size_t position = 0;
-
-public:
-    virtual std::vector<SampleStereo> getSamples(size_t n_samples) = 0;
-    virtual void seek(float pos) = 0;
-    virtual void setLooping(bool is_looping) = 0;
-    virtual void setReverse(bool reversed) = 0;
-    virtual double getSampleRate() = 0;
 };
 
 class Track {
@@ -108,76 +133,6 @@ public:
         return mix;
     }
 };
-
-class SampleMonoS16 : public Sample {
-    std::vector<int16_t> data;
-    Hz sr;
-
-public:
-    SampleMonoS16(std::vector<int16_t> data, Hz sample_rate)
-    {
-        this->data = data;
-        loop_end = data.size() - 1;
-        sr = sample_rate;
-    }
-
-    std::vector<SampleStereo> getSamples(size_t n_samples)
-    {
-        std::vector<SampleStereo> buf(n_samples);
-
-        for (auto &s : buf) {
-            if (position >= data.size()) {
-                continue;
-            }
-            s.l = s.r = data[position] / (float)INT16_MAX;
-
-            if (!reverse) {
-                position++;
-                if (looped && position >= loop_end) {
-                    position = loop_start;
-                }
-            } else {
-                position--;
-                if (looped && position <= loop_start) {
-                    position = loop_end;
-                }
-            }
-        }
-
-        return buf;
-    }
-
-    void seek(float pos)
-    {
-        pos = std::fminf(std::fmaxf(pos, 0.0), 1.0);
-        position = pos * (data.size()-1);
-    }
-
-    void setLooping(bool is_looping) { looped = is_looping; };
-    void setReverse(bool reversed) { reverse = reversed; };
-    Hz getSampleRate() { return sr; }
-};
-
-Sample *load_sample(std::string path)
-{
-    // fixme: no error handling...
-    SDL_AudioSpec spec;
-    uint8_t *buf;
-    uint32_t len;
-
-    SDL_LoadWAV(path.c_str(), &spec, &buf, &len);
-
-    if (spec.format == AUDIO_S16 && spec.channels == 1) {
-        std::vector<int16_t> data(len / sizeof(int16_t));
-        std::memcpy(data.data(), buf, len);
-        SDL_FreeWAV(buf);
-        return new SampleMonoS16(data, spec.freq);
-    } else {
-        SDL_FreeWAV(buf);
-    }
-    return nullptr;
-}
-
 
 class Sine : public Generator {
     float t = 0;
@@ -377,7 +332,7 @@ public:
                 prev_sample = smp;
             }
 
-            t += freq / 440.0f;
+            t += freq / 261.6255f; //FIXME
             while (t > 1.f) {
                 t -= 1.f;
                 buffer_pos++;
@@ -407,14 +362,6 @@ public:
             }
         }
     }
-};
-
-class Player
-{
-    double bpm;
-    double ticks;
-    Hz sample_rate;
-
 };
 
 

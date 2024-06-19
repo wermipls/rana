@@ -153,10 +153,12 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
                 continue;
             }
 
-            sample_data.push_back(sd);
             song.ins[ins_i].smp[smp_i].sampledata_id = sample_data.size();
+            sample_data.push_back(sd);
         }
     }
+
+    song.sampledata = sample_data;
 }
 
 musfmt::Sample parse_sample(pugi::xml_node &smp)
@@ -344,12 +346,6 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     }
 
                     col_i++;
-                }
-            }
-            for (auto &c : t.col) {
-                log::info("note channel:");
-                for (auto &r : c.rows) {
-                    log::info("  %02x %02x", r.type, r.param);
                 }
             }
             p.tracks.push_back(t);

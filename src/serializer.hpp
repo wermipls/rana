@@ -106,16 +106,16 @@ public:
     }
 
     // FIXME: use appropriate type serializers
-    template<typename T> void vector(std::vector<T> data) {
+    template<typename T> void vector(std::vector<T> &data) {
         if (reading) {
             uint32_t size;
             int32(&size);
-            data = std::vector<T>(size / sizeof(T));
-            read(data.data(), size);
+            data = std::vector<T>(size);
+            read(data.data(), size * sizeof(T));
         } else {
-            uint32_t size = data.size() * sizeof(T);
+            uint32_t size = data.size();
             int32(&size);
-            write(data.data(), size);
+            write(data.data(), size * sizeof(T));
         }
     }
 

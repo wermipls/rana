@@ -28,7 +28,7 @@ class MusicPlayer {
 
     int cmd_i = 0;
     float sleep_lines = 0;
-    Saw saw;
+    Sampler *sampler = nullptr;
 
     void recalculateSamplesTick()
     {
@@ -36,13 +36,32 @@ class MusicPlayer {
     }
 
 public:
-    MusicPlayer(musfmt::Song song, float sr = 44100) : song{song}, sr{sr}, saw{Saw(sr, 0, 0.5)}
+    MusicPlayer(musfmt::Song song, float sr = 44100) : song{song}, sr{sr}
     {
         bpm = song.bpm;
         ticks_line = song.line_ticks;
         lines_beat = song.beat_lines;
         lines_left = song.patterns[0].lines;
         recalculateSamplesTick();
+
+        auto sample_id = song.ins[0].smp[0].sampledata_id;
+        auto &sample_data = song.sampledata[sample_id].data;
+        auto sample = load_flac(sample_data.data(), sample_data.size());
+        if (sample == nullptr) {
+            abort();
+        }
+        if (song.ins[0].smp[0].loop_mode == musfmt::LoopMode::Forward) {
+            sample->setLooping(true);
+        }
+
+        sample->loop_start = song.ins[0].smp[0].loop_start;
+        sample->loop_end = song.ins[0].smp[0].loop_end;
+        sampler = new Sampler(sample);
+    }
+
+    ~MusicPlayer()
+    {
+        delete sampler;
     }
 
     void doCommand(int column, musfmt::Command cmd)
@@ -51,10 +70,10 @@ public:
         switch (cmd.type) {
             case Note:
                 if (cmd.note) {
-                    saw.setVolume(0.2);
-                    saw.setFrequency(freqFromNote(cmd.note));
+                    sampler->setVolume(0.2);
+                    sampler->setFrequency(freqFromNote(cmd.note + song.ins[0].smp[0].transpose));
                 } else {
-                    saw.setVolume(0);
+                    sampler->setVolume(0);
                 }
                 break;
             case SleepLines:
@@ -88,8 +107,15 @@ public:
     std::vector<SampleStereo> getSamples(size_t n_samples)
     {
         doSequence(n_samples);
-        
-        return saw.getSamples(n_samples);
+
+        auto samples = sampler->getSamples(n_samples);
+
+        for (auto &n : samples) {
+            n.l * 0.2;
+            n.r * 0.2;
+        }
+
+        return samples;
     }
 
     void setTicks(int ticks) { ticks_line = ticks; recalculateSamplesTick(); }

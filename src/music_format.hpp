@@ -195,6 +195,7 @@ struct Song : public Serializable {
     std::vector<uint8_t> sequence;
     uint8_t loop_start;
     uint8_t loop_end;
+    std::vector<SampleData> sampledata;
 
     virtual void serialize(Serializer &s)
     {
@@ -228,6 +229,15 @@ struct Song : public Serializable {
             sequence.resize(size);
             for (auto &n : sequence) {
                 s.int8(&n);
+            }
+        }
+
+        { // samples
+            uint16_t size = sampledata.size();
+            s.int16(&size);
+            sampledata.resize(size);
+            for (auto &n : sampledata) {
+                n.serialize(s);
             }
         }
 
