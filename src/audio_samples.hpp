@@ -18,7 +18,7 @@ struct DecodedSample {
     float rate;
 };
 
-std::unique_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
+std::shared_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
 {
     auto df = drflac_open_memory(s.data(), s.size(), NULL);
     auto frames = df->totalPCMFrameCount;

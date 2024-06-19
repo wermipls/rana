@@ -318,7 +318,7 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
         p.lines = val_int_req(pattern, "NumberOfLines");
 
         for (auto &track : pattern.child("Tracks").children("PatternTrack")) {
-            musfmt::PatternTrack t{};
+            std::vector<musfmt::PatternChannel> ch(3);
             int prev_index[12] = {0};
             for (auto &line : track.child("Lines").children("Line")) {
                 using enum rana::musfmt::CommandType;
@@ -326,8 +326,8 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                 auto line_index = line.attribute("index").as_int(0);
                 int col_i = 0;
                 for (auto &nc : line.child("NoteColumns").children("NoteColumn")) {
-                    if (t.col.size() < col_i + 1) {
-                        t.col.resize(t.col.size() + 1);
+                    if (ch.size() < col_i + 1) {
+                        ch.resize(ch.size() + 1);
                     }
 
                     rana::musfmt::Command cmd{};
@@ -340,20 +340,32 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 
                         cmd.type = SleepLines;
                         cmd.param_xy = delta;
-                        t.col[col_i].rows.push_back(cmd);
+                        ch[col_i].rows.push_back(cmd);
                         prev_index[col_i] = line_index;
                     }
 
                     if (auto note = parse_note(nc); note >= 0) {
                         cmd.type = Note;
                         cmd.note = note;
-                        t.col[col_i].rows.push_back(cmd);
+                        ch[col_i].rows.push_back(cmd);
+                    }
+
+                    if (!nc.child("Instrument").empty()) {
+                        cmd.type = Instrument;
+                        cmd.param_xy = val_int_req(nc, "Instrument");
+                        ch[col_i].rows.push_back(cmd);
+                    }
+
+                    if (!nc.child("Volume").empty()) {
+                        cmd.type = Volume;
+                        cmd.param_xy = val_int_req(nc, "Volume");
+                        ch[col_i].rows.push_back(cmd);
                     }
 
                     col_i++;
                 }
             }
-            p.tracks.push_back(t);
+            p.ch.insert(p.ch.end(), ch.begin(), ch.end());
         }
         song.patterns.push_back(p);
     }

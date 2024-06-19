@@ -105,6 +105,7 @@ public:
         if (note) {
             resetState();
             pitch_actual = pitch_target = freqFromNote(note);
+            note_triggered = true;
         }
     }
 
@@ -113,7 +114,7 @@ public:
         if (note_triggered) {
             volume_actual = volume_target = volume;
         } else {
-            volume_target = volume_actual;
+            volume_target = volume;
         }
     }
 
@@ -138,12 +139,13 @@ public:
 
     std::vector<SampleStereo> getSamples(size_t n_samples)
     {
+        note_triggered = false;
         using enum musfmt::Interpolation;
         auto buf = std::vector<SampleStereo>(n_samples);
 
-        //if (isDisabled()) {
-        //    return buf;
-        //}
+        if (isDisabled()) {
+            return buf;
+        }
 
         auto &smpdat = sample.s->data;
         SampleStereo smp;
@@ -213,18 +215,15 @@ public:
     void getSamples(std::vector<SampleStereo> &out)
     {
         auto size = out.size();
-        std::vector<SampleStereo> buf(size);
 
         for (size_t i = 0; i < voices; i++) {
             auto sampler_out = samplers[i].getSamples(size);
 
             for (size_t j = 0; j < size; j++) {
-                buf[j].l += sampler_out[j].l;
-                buf[j].r += sampler_out[j].r;
+                out[j].l += sampler_out[j].l;
+                out[j].r += sampler_out[j].r;
             }
         }
-
-        out = buf;
     }
 };
 
@@ -238,10 +237,11 @@ class MusicPlayer {
 
     float lines_left = 0;
 
-    int cmd_i = 0;
-    float sleep_lines = 0;
-    Channel channel;
-    std::unique_ptr<DecodedSample> decoded_sample;
+    size_t ch_count = 0;
+    std::vector<int> cmd_i;
+    std::vector<float> sleep_lines;
+    std::vector<Channel> channel;
+    std::vector<std::shared_ptr<DecodedSample>> decoded_sample;
 
     void recalculateSamplesTick()
     {
@@ -257,29 +257,47 @@ public:
         lines_left = song.patterns[0].lines;
         recalculateSamplesTick();
 
-        auto sample_id = song.ins[0].smp[0].sampledata_id;
-        auto &sample_data = song.sampledata[sample_id].data;
-        decoded_sample = decode_flac(sample_data);
-        if (decoded_sample == nullptr) {
-            abort();
+        for (auto &n : song.sampledata) {
+            auto d = decode_flac(n.data);
+            if (d == nullptr) {
+                log::err("failed to decode sample...");
+                abort();
+            }
+            decoded_sample.push_back(d);
         }
 
-        auto sampler = channel.sampler();
-        channel.setInstrument(song.ins[0], decoded_sample.get());
+        ch_count = 9 * 3; // FIXME
+
+        cmd_i.resize(ch_count);
+        sleep_lines.resize(ch_count);
+        channel.resize(ch_count); 
+        for (auto &n : channel) {
+            auto sampler = n.sampler();
+            auto sample_id = song.ins[0].smp[0].sampledata_id;
+            n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
+        }
     }
 
     void doCommand(int column, musfmt::Command cmd)
     {
-        auto sampler = channel.sampler();
+        auto sampler = channel[column].sampler();
         using enum musfmt::CommandType;
         switch (cmd.type) {
             case Note: {
-                channel.note(cmd.note);
+                channel[column].note(cmd.note);
                 break;
             }
             case SleepLines:
-                sleep_lines += cmd.param_xy;
+                sleep_lines[column] += cmd.param_xy;
                 break;
+            case Volume:
+                channel[column].sampler()->setVolume((float)cmd.param_xy / 80.0);
+                break;
+            case Instrument: {
+                auto &ins = song.ins[cmd.param_xy];
+                auto sid = ins.smp[0].sampledata_id;
+                channel[column].setInstrument(ins, decoded_sample[sid].get());
+            }
         }
     }
 
@@ -287,21 +305,25 @@ public:
     {
         if (lines_left <= 0) {
             lines_left += song.patterns[0].lines;
-            cmd_i = 0;
-            sleep_lines = 0;
-        }
-        while (sleep_lines <= 0) {
-            auto &rows = song.patterns[0].tracks[0].col[0].rows;
-            if (cmd_i < rows.size()) {
-                auto cmd = rows[cmd_i];
-                doCommand(0, cmd);
-                cmd_i++;
-            } else {
-                break;
+            for (size_t i = 0; i < ch_count; i++) {
+                cmd_i[i] = 0;
+                sleep_lines[i] = 0;
             }
         }
+        for (size_t i = 0; i < ch_count; i++) {
+            while (sleep_lines[i] <= 0) {
+                auto &rows = song.patterns[0].ch[i].rows;
+                if (cmd_i[i] < rows.size()) {
+                    auto cmd = rows[cmd_i[i]];
+                    doCommand(i, cmd);
+                    cmd_i[i]++;
+                } else {
+                    break;
+                }
+            }
+            sleep_lines[i] -= samples / samples_tick / (float)ticks_line;
+        }
 
-        sleep_lines -= samples / samples_tick / (float)ticks_line;
         lines_left -= samples / samples_tick / (float)ticks_line;
     }
 
@@ -311,7 +333,9 @@ public:
 
         std::vector<SampleStereo> samples(n_samples); 
 
-        channel.getSamples(samples);
+        for (auto &ch : channel) {
+            ch.getSamples(samples);
+        }
 
         for (auto &n : samples) {
             n.l *= 0.5;

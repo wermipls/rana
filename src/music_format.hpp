@@ -141,7 +141,7 @@ struct Command {
     }
 };
 
-struct PatternCol {
+struct PatternChannel {
     std::vector<Command> rows;
 
     void serialize(Serializer &s)
@@ -155,29 +155,16 @@ struct PatternCol {
     }
 };
 
-struct PatternTrack {
-    std::vector<PatternCol> col;
-
-    void serialize(Serializer &s)
-    {
-        uint8_t size = col.size();
-        s.int8(&size);
-        col.resize(size);
-        for (auto &n : col) {
-            n.serialize(s);
-        }
-    }
-};
 struct Pattern : public Serializable {
-    std::vector<PatternTrack> tracks;
+    std::vector<PatternChannel> ch;
     uint16_t lines;
 
     virtual void serialize(Serializer &s)
     {
-        uint8_t size = tracks.size();
+        uint8_t size = ch.size();
         s.int8(&size);
-        tracks.resize(size);
-        for (auto &n : tracks) {
+        ch.resize(size);
+        for (auto &n : ch) {
             n.serialize(s);
         }
 
