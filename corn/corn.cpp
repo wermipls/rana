@@ -211,6 +211,11 @@ musfmt::Sample parse_sample(pugi::xml_node &smp)
         log::warn("beatsync is unsupported, please apply it as transpose/finetune instead");
     }
 
+    if (val(smp, "NewNoteAction") != "Cut") {
+        log::warn("new note actions (NNA) other than Cut are unsupported, "
+                  "notes playing on the same column will cut each other off");
+    }
+
     return sample;
 }
 
