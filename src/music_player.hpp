@@ -6,6 +6,11 @@
 namespace rana {
 namespace audio {
 
+double intervalFromSemi(double semitones)
+{
+    return std::pow(2, (double)semitones / 12.0);
+}
+
 Hz freqFromNote(uint8_t note)
 {
     constexpr auto A4 = 4*12 + 10;
@@ -13,8 +18,253 @@ Hz freqFromNote(uint8_t note)
 
     int interval = note - A4;
 
-    return tuning_A4 * std::pow(2, (double)interval / 12.0);
+    return tuning_A4 * intervalFromSemi(interval);
 }
+
+struct DecodedSample {
+    std::vector<SampleStereo> data;
+    float rate;
+};
+
+std::unique_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
+{
+    auto df = drflac_open_memory(s.data(), s.size(), NULL);
+    auto frames = df->totalPCMFrameCount;
+    auto channels = df->channels;
+    auto buf = std::vector<float>(df->totalPCMFrameCount * df->channels);
+
+    auto f = drflac_read_pcm_frames_f32(df, buf.size(), buf.data());
+    drflac_close(df);
+
+    auto decoded = std::make_unique<DecodedSample>();
+    decoded->rate = df->sampleRate;
+
+    auto &out = decoded->data;
+    out.resize(f);
+
+    if (channels == 1) {
+        for (size_t i = 0; i < frames; i++) {
+            out[i].l = buf[i];
+            out[i].r = buf[i];
+        }
+    } else if (channels == 2) {
+        for (size_t i = 0; i < frames; i++) {
+            out[i].l = buf[i*2];
+            out[i].r = buf[i*2+1];
+        }
+    } else {
+        log::err("unsupported flac channel count: %d", df->channels);
+        return nullptr;
+    }
+
+    return decoded;
+};
+
+struct PlaybackSample {
+    DecodedSample *s;
+    float volume;
+    float pan;
+    float transpose_fine;
+    musfmt::Interpolation interpolation;
+    musfmt::LoopMode loop_mode;
+    uint32_t loop_start;
+    uint32_t loop_end;
+};
+
+
+class MusicSampler {
+    const float sr = 44100;
+
+    float volume_target = 0;
+    float volume_actual = 0;
+    float volume_coeff = 0;
+    bool note_off = 0;       // true -> stop generation after certain volume threshold
+    bool note_triggered = 0; // true -> note has triggered this tick
+    float pitch_actual = 0;
+    float pitch_target = 0;
+    float time_since_trigger = 0; // in seconds; used for resolving adsr etc.
+
+    PlaybackSample sample{};
+    int sample_pos = 0;
+    float t = 0;
+    SampleStereo prev{};
+
+    void resetState()
+    {
+        volume_actual = 1;
+        volume_target = 1;
+        volume_coeff = factor_1pole(RnsVolumeSmoothing, sr);
+        note_off = false;
+        time_since_trigger = 0;
+
+        sample_pos = 0;
+        t = 0;
+        prev = {0,0};
+    }
+
+    void updateVolume()
+    {
+        volume_actual += (volume_target - volume_actual) * volume_coeff; 
+    }
+
+    void sampleNext()
+    {
+        using enum musfmt::LoopMode;
+        switch (sample.loop_mode) {
+            case Off:
+            case OneShot:
+                if (sample_pos < sample.s->data.size() - 1) sample_pos++;
+                break;
+            case Forward:
+                sample_pos++;
+                if (sample_pos == sample.loop_end) {
+                    sample_pos = sample.loop_start;
+                }
+                break;
+        }
+    }
+
+public:
+    MusicSampler()
+    {
+        resetState();
+    }
+
+    void noteOff()
+    {
+        if (note_off) return;
+
+        volume_target = 0;
+        volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
+    }
+
+    void setNote(uint8_t note)
+    {
+        if (note) {
+            resetState();
+            pitch_actual = pitch_target = freqFromNote(note);
+        }
+    }
+
+    void setVolume(float volume)
+    {
+        if (note_triggered) {
+            volume_actual = volume_target = volume;
+        } else {
+            volume_target = volume_actual;
+        }
+    }
+
+    void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
+    {
+        sample.s = smp;
+        auto &s = ins.smp[0];
+        sample.volume        = s.volume;
+        sample.pan           = s.pan;
+        sample.loop_mode     = s.loop_mode;
+        sample.loop_start    = s.loop_start;
+        sample.loop_end      = s.loop_end;
+        sample.interpolation = s.interpolation;
+
+        sample.transpose_fine = intervalFromSemi((double)s.transpose + (double)s.fine / 127);
+        sample.transpose_fine *= (smp->rate / sr);
+    }
+
+    bool isDisabled() {
+        return note_off && volume_actual < 0.001; // -60dB threshold
+    }
+
+    std::vector<SampleStereo> getSamples(size_t n_samples)
+    {
+        using enum musfmt::Interpolation;
+        auto buf = std::vector<SampleStereo>(n_samples);
+
+        //if (isDisabled()) {
+        //    return buf;
+        //}
+
+        auto &smpdat = sample.s->data;
+        SampleStereo smp;
+
+        for (auto &a : buf) {
+            updateVolume();
+            smp = smpdat[sample_pos];
+            float tt = t;
+            if (sample.interpolation == None) {
+                tt = 0;
+            }
+            a.l = smp.l * tt + prev.l * (1.f - tt);
+            a.r = smp.r * tt + prev.r * (1.f - tt);
+            a.l *= volume_actual * sample.volume;//a.l *= volume * pan_factors.l;
+            a.r *= volume_actual * sample.volume;//a.r *= volume * pan_factors.r;
+            if (sample.interpolation != Linear) {
+                prev = smp;
+            }
+
+            t += pitch_actual * sample.transpose_fine / 261.6255f; //FIXME
+            while (t > 1.f) {
+                t -= 1.f;
+                if (sample.interpolation == Linear) {
+                    prev = smpdat[sample_pos];
+                }
+                sampleNext();
+            }
+        }
+
+        return buf;
+    }
+};
+
+class Channel {
+    static constexpr auto voices = 2;
+
+    std::vector<MusicSampler> samplers;
+    size_t current = 0;
+
+public:
+    Channel()
+    {
+        samplers.resize(voices);
+    }
+
+    MusicSampler *sampler()
+    {
+        return &samplers[current];
+    }
+
+    void note(uint8_t note)
+    {
+        samplers[current].noteOff();
+        if (note) {
+            current = (current + 1) % voices;
+            samplers[current].setNote(note);
+        }
+    }
+
+    void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
+    {
+        for (auto &n : samplers) {
+            n.setInstrument(ins, smp);
+        }
+    }
+
+    void getSamples(std::vector<SampleStereo> &out)
+    {
+        auto size = out.size();
+        std::vector<SampleStereo> buf(size);
+
+        for (size_t i = 0; i < voices; i++) {
+            auto sampler_out = samplers[i].getSamples(size);
+
+            for (size_t j = 0; j < size; j++) {
+                buf[j].l += sampler_out[j].l;
+                buf[j].r += sampler_out[j].r;
+            }
+        }
+
+        out = buf;
+    }
+};
 
 class MusicPlayer {
     const musfmt::Song song;
@@ -28,7 +278,8 @@ class MusicPlayer {
 
     int cmd_i = 0;
     float sleep_lines = 0;
-    Sampler *sampler = nullptr;
+    Channel channel;
+    std::unique_ptr<DecodedSample> decoded_sample;
 
     void recalculateSamplesTick()
     {
@@ -46,36 +297,24 @@ public:
 
         auto sample_id = song.ins[0].smp[0].sampledata_id;
         auto &sample_data = song.sampledata[sample_id].data;
-        auto sample = load_flac(sample_data.data(), sample_data.size());
-        if (sample == nullptr) {
+        decoded_sample = decode_flac(sample_data);
+        if (decoded_sample == nullptr) {
             abort();
         }
-        if (song.ins[0].smp[0].loop_mode == musfmt::LoopMode::Forward) {
-            sample->setLooping(true);
-        }
 
-        sample->loop_start = song.ins[0].smp[0].loop_start;
-        sample->loop_end = song.ins[0].smp[0].loop_end;
-        sampler = new Sampler(sample);
-    }
-
-    ~MusicPlayer()
-    {
-        delete sampler;
+        auto sampler = channel.sampler();
+        channel.setInstrument(song.ins[0], decoded_sample.get());
     }
 
     void doCommand(int column, musfmt::Command cmd)
     {
+        auto sampler = channel.sampler();
         using enum musfmt::CommandType;
         switch (cmd.type) {
-            case Note:
-                if (cmd.note) {
-                    sampler->setVolume(0.2);
-                    sampler->setFrequency(freqFromNote(cmd.note + song.ins[0].smp[0].transpose));
-                } else {
-                    sampler->setVolume(0);
-                }
+            case Note: {
+                channel.note(cmd.note);
                 break;
+            }
             case SleepLines:
                 sleep_lines += cmd.param_xy;
                 break;
@@ -108,11 +347,13 @@ public:
     {
         doSequence(n_samples);
 
-        auto samples = sampler->getSamples(n_samples);
+        std::vector<SampleStereo> samples(n_samples); 
+
+        channel.getSamples(samples);
 
         for (auto &n : samples) {
-            n.l * 0.2;
-            n.r * 0.2;
+            n.l *= 0.2;
+            n.r *= 0.2;
         }
 
         return samples;
