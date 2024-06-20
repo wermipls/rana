@@ -275,7 +275,7 @@ musfmt::Mixer parse_mixer(pugi::xml_node &rnsong)
         mixer.tracks.push_back(t);
 
         log::info("track %d: '%s'", mixer.tracks.size(), t.name.c_str());
-        log::info("  volume: %.2f dB", t.volume);
+        log::info("  volume: %.2f dB", dB(t.volume));
         log::info("  pan: %f",       t.pan);
     }
 
