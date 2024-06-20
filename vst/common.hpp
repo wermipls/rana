@@ -123,29 +123,34 @@ VstInt32 VstEffect::getVendorVersion() { return 1000; }
 
 void VstEffect::setParameter(VstInt32 index, float value)
 {
+    if (index >= fx->params.size()) return;
     fx->vstSetParam(index, value);
 }
 
 float VstEffect::getParameter(VstInt32 index)
 {
+    if (index >= fx->params.size()) return 0;
     auto &p = fx->params[index];
     return float2norm(p.value, p.min, p.max);
 }
 
 void VstEffect::getParameterName(VstInt32 index, char *label) 
 {
+    if (index >= fx->params.size()) return;
     auto &p = fx->params[index];
     vst_strncpy(label, p.name, kVstMaxParamStrLen);
 }
 
 void VstEffect::getParameterDisplay(VstInt32 index, char *text) 
 {
+    if (index >= fx->params.size()) return;
     auto &p = fx->params[index];
     snprintf(text, kVstMaxParamStrLen, "%f", p.value);
 }
 
 void VstEffect::getParameterLabel(VstInt32 index, char *label) 
 {
+    if (index >= fx->params.size()) return;
     auto &p = fx->params[index];
     vst_strncpy(label, p.label, kVstMaxParamStrLen);
 }
