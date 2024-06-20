@@ -40,7 +40,7 @@ class MusicSampler {
     float volume_target = 0;
     float volume_actual = 0;
     float volume_coeff = 0;
-    bool note_off = 0;       // true -> stop generation after certain volume threshold
+    bool note_off = true;    // true -> stop generation after certain volume threshold
     bool note_triggered = 0; // true -> note has triggered this tick
     float pitch_actual = 0;
     float pitch_target = 0;
@@ -50,6 +50,15 @@ class MusicSampler {
     int sample_pos = 0;
     float t = 0;
     SampleStereo prev{};
+
+    float vibrato_phase = 0;
+    float vibrato_speed = 0;
+    float vibrato_intensity = 0;
+    float vibrato_current = 0;
+
+    float tick = 0;
+    float arp_seq[3] = {1, 1, 1};
+    float arp_current = 1;
 
     void resetState()
     {
@@ -62,11 +71,28 @@ class MusicSampler {
         sample_pos = 0;
         t = 0;
         prev = {0,0};
+
+        vibrato_current = 1;
+        vibrato_intensity = 0;
+        vibrato_phase = 0;
+        vibrato_speed = 0;
+
+        arp_seq[1] = 1;
+        arp_seq[2] = 1;
+        arp_current = 1;
+        tick = 0;
     }
 
     void updateVolume()
     {
-        volume_actual += (volume_target - volume_actual) * volume_coeff; 
+        volume_actual += (volume_target - volume_actual) * volume_coeff;
+    }
+
+    void updateVibrato(float deltatime)
+    {
+        vibrato_phase += vibrato_speed * deltatime;
+        vibrato_current = 1 + std::sin(vibrato_phase) * vibrato_intensity;
+        //log::info("p %f in %f sp %f cur %f", vibrato_phase, vibrato_intensity, vibrato_speed, vibrato_current);
     }
 
     void sampleNext()
@@ -75,7 +101,7 @@ class MusicSampler {
         switch (sample.loop_mode) {
             case Off:
             case OneShot:
-                if (sample_pos < sample.s->data.size() - 1) sample_pos++;
+                if (sample_pos < sample.s->data.size()) sample_pos++;
                 break;
             case Forward:
                 sample_pos++;
@@ -89,7 +115,6 @@ class MusicSampler {
 public:
     MusicSampler()
     {
-        resetState();
     }
 
     void noteOff()
@@ -118,6 +143,18 @@ public:
         }
     }
 
+    void setVibrato(float speed, float intensity)
+    {
+        vibrato_speed = speed;
+        vibrato_intensity = intensity;
+    }
+
+    void setArpeggio(int x, int y)
+    {
+        arp_seq[1] = intervalFromSemi(x);
+        arp_seq[2] = intervalFromSemi(y);
+    }
+
     void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
     {
         sample.s = smp;
@@ -137,6 +174,12 @@ public:
         return note_off && volume_actual < 0.001; // -60dB threshold
     }
 
+    inline static SampleStereo getSample(std::vector<SampleStereo> &s, size_t p)
+    {
+        if (p >= s.size()) return SampleStereo{0,0};
+        return s[p];
+    }
+
     std::vector<SampleStereo> getSamples(size_t n_samples)
     {
         note_triggered = false;
@@ -147,12 +190,14 @@ public:
             return buf;
         }
 
+        updateVibrato((float)n_samples / sr);
+
         auto &smpdat = sample.s->data;
         SampleStereo smp;
 
         for (auto &a : buf) {
             updateVolume();
-            smp = smpdat[sample_pos];
+            smp = getSample(smpdat, sample_pos);
             float tt = t;
             if (sample.interpolation == None) {
                 tt = 0;
@@ -165,17 +210,23 @@ public:
                 prev = smp;
             }
 
-            t += pitch_actual * sample.transpose_fine / 261.6255f; //FIXME
+            t += pitch_actual * vibrato_current * arp_current * sample.transpose_fine / 261.6255f; //FIXME
             while (t > 1.f) {
                 t -= 1.f;
                 if (sample.interpolation == Linear) {
-                    prev = smpdat[sample_pos];
+                    prev = getSample(smpdat, sample_pos);
                 }
                 sampleNext();
             }
         }
 
         return buf;
+    }
+
+    void doTicks(float ticks)
+    {
+        tick += ticks;
+        arp_current = arp_seq[int(tick/2) % 3]; // FIXME: what is this about?
     }
 };
 
@@ -212,7 +263,7 @@ public:
         }
     }
 
-    void getSamples(std::vector<SampleStereo> &out)
+    void getSamples(std::vector<SampleStereo> &out, float volume)
     {
         auto size = out.size();
 
@@ -220,8 +271,8 @@ public:
             auto sampler_out = samplers[i].getSamples(size);
 
             for (size_t j = 0; j < size; j++) {
-                out[j].l += sampler_out[j].l;
-                out[j].r += sampler_out[j].r;
+                out[j].l += sampler_out[j].l * volume;
+                out[j].r += sampler_out[j].r * volume;
             }
         }
     }
@@ -244,6 +295,8 @@ class MusicPlayer {
     std::vector<std::shared_ptr<DecodedSample>> decoded_sample;
 
     int sequence_pos = 0;
+
+    std::vector<uint8_t> ch_to_track;
 
     void recalculateSamplesTick()
     {
@@ -274,11 +327,18 @@ public:
 
         cmd_i.resize(ch_count);
         sleep_lines.resize(ch_count);
-        channel.resize(ch_count); 
+        channel.resize(ch_count);
         for (auto &n : channel) {
             auto sampler = n.sampler();
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
+        }
+
+        for (int i = 0; i < song.mixer.tracks.size(); i++) {
+            auto &track = song.mixer.tracks[i];
+            for (int j = 0; j < track.columns; j++) {
+                ch_to_track.push_back(i);
+            } 
         }
     }
 
@@ -339,6 +399,7 @@ public:
                     break;
                 }
             }
+            channel[i].sampler()->doTicks(samples / samples_tick);
             sleep_lines[i] -= samples / samples_tick / (float)ticks_line;
         }
 
@@ -351,8 +412,9 @@ public:
 
         std::vector<SampleStereo> samples(n_samples); 
 
-        for (auto &ch : channel) {
-            ch.getSamples(samples);
+        for (int i = 0; i < channel.size(); i++) {
+            auto &track = song.mixer.tracks[ch_to_track[i]];
+            channel[i].getSamples(samples, track.volume);
         }
 
         for (auto &n : samples) {
