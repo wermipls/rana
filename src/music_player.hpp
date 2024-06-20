@@ -266,7 +266,9 @@ public:
             decoded_sample.push_back(d);
         }
 
-        ch_count = 9 * 3; // FIXME
+        for (auto &n : song.mixer.tracks) {
+            ch_count += n.columns;
+        }
 
         cmd_i.resize(ch_count);
         sleep_lines.resize(ch_count);

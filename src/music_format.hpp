@@ -83,12 +83,14 @@ struct Instrument : public Serializable {
 
 struct MixerTrack : public Serializable {
     std::string name;
+    uint8_t columns;
     double volume;
     double pan;
 
     virtual void serialize(Serializer &s)
     {
         s.string8(name);
+        s.int8(&columns);
         s.float64(&volume);
         s.float64(&pan);
     }

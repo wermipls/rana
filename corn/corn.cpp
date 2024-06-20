@@ -223,6 +223,7 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
 {
     musfmt::MixerTrack track{};
     track.name = val(t, "Name");
+    track.columns = val_int(t, "NumberOfVisibleNoteColumns", 1);
 
     auto soloed = val_bool(t, "Soloed");
 
@@ -316,9 +317,10 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
     for (auto &pattern : patterns) {
         musfmt::Pattern p{};
         p.lines = val_int_req(pattern, "NumberOfLines");
+        int track_i = 0;
 
         for (auto &track : pattern.child("Tracks").children("PatternTrack")) {
-            std::vector<musfmt::PatternChannel> ch(3);
+            std::vector<musfmt::PatternChannel> ch(song.mixer.tracks[track_i].columns);
             int prev_index[12] = {0};
             for (auto &line : track.child("Lines").children("Line")) {
                 using enum rana::musfmt::CommandType;
@@ -326,8 +328,9 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                 auto line_index = line.attribute("index").as_int(0);
                 int col_i = 0;
                 for (auto &nc : line.child("NoteColumns").children("NoteColumn")) {
-                    if (ch.size() < col_i + 1) {
-                        ch.resize(ch.size() + 1);
+                    if (ch.size() <= col_i) {
+                        log::warn("discarding notes from track %d after column %d", track_i, ch.size());
+                        break;
                     }
 
                     rana::musfmt::Command cmd{};
@@ -365,6 +368,7 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     col_i++;
                 }
             }
+            track_i++;
             p.ch.insert(p.ch.end(), ch.begin(), ch.end());
         }
         song.patterns.push_back(p);
