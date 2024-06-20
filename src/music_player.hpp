@@ -243,6 +243,8 @@ class MusicPlayer {
     std::vector<Channel> channel;
     std::vector<std::shared_ptr<DecodedSample>> decoded_sample;
 
+    int sequence_pos = 0;
+
     void recalculateSamplesTick()
     {
         samples_tick = sr / (bpm / 60.0 * float(lines_beat * ticks_line));
@@ -254,7 +256,7 @@ public:
         bpm = song.bpm;
         ticks_line = song.line_ticks;
         lines_beat = song.beat_lines;
-        lines_left = song.patterns[0].lines;
+        lines_left = currentPattern().lines;
         recalculateSamplesTick();
 
         for (auto &n : song.sampledata) {
@@ -278,6 +280,19 @@ public:
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
         }
+    }
+
+    void nextPattern()
+    {
+        sequence_pos++;
+        if (sequence_pos >= song.loop_end) {
+            sequence_pos = song.loop_start;
+        }
+    }
+
+    const musfmt::Pattern &currentPattern()
+    {
+        return song.patterns[song.sequence[sequence_pos]];
     }
 
     void doCommand(int column, musfmt::Command cmd)
@@ -306,7 +321,8 @@ public:
     void doSequence(size_t samples)
     {
         if (lines_left <= 0) {
-            lines_left += song.patterns[0].lines;
+            nextPattern();
+            lines_left += currentPattern().lines;
             for (size_t i = 0; i < ch_count; i++) {
                 cmd_i[i] = 0;
                 sleep_lines[i] = 0;
@@ -314,7 +330,7 @@ public:
         }
         for (size_t i = 0; i < ch_count; i++) {
             while (sleep_lines[i] <= 0) {
-                auto &rows = song.patterns[0].ch[i].rows;
+                auto &rows = currentPattern().ch[i].rows;
                 if (cmd_i[i] < rows.size()) {
                     auto cmd = rows[cmd_i[i]];
                     doCommand(i, cmd);

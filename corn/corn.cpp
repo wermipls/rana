@@ -375,6 +375,26 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
     }
 }
 
+void parse_sequence(pugi::xml_node &rnsong, musfmt::Song &song)
+{
+    auto seq = rnsong.child("PatternSequence");
+    for (auto &n : seq.child("SequenceEntries").children("SequenceEntry")) {
+        auto pattern = val_int(n, "Pattern", 0);
+        song.sequence.push_back(pattern);
+    }
+
+    auto loop = seq.child("LoopSelection");
+    int start = val_int(loop, "CursorPos", -1);
+    int end   = val_int(loop, "RangePos",  -1);
+    if (start < 0 || end < 0) { // no loop region
+        song.loop_start = 0;
+        song.loop_end = song.patterns.size() - 1;
+    } else {
+        song.loop_start = start;
+        song.loop_end = end;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 0) {
@@ -455,6 +475,7 @@ int main(int argc, char **argv)
 
     song.mixer = parse_mixer(rnsong);
     parse_patterns(rnsong, song);
+    parse_sequence(rnsong, song);
 
     auto ser = Serializer();
     song.serialize(ser);
