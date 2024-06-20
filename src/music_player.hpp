@@ -57,6 +57,7 @@ class MusicSampler {
     float vibrato_current = 0;
 
     float tick = 0;
+    float line = 0;
     float arp_seq[3] = {1, 1, 1};
     float arp_current = 1;
 
@@ -112,6 +113,12 @@ class MusicSampler {
         }
     }
 
+    void resetEffects()
+    {
+        setArpeggio(0,0);
+        setVibrato(0,0);
+    }
+
 public:
     MusicSampler()
     {
@@ -145,12 +152,14 @@ public:
 
     void setVibrato(float speed, float intensity)
     {
+        line = std::floor(line);
         vibrato_speed = speed;
         vibrato_intensity = intensity;
     }
 
     void setArpeggio(int x, int y)
     {
+        line = std::floor(line);
         arp_seq[1] = intervalFromSemi(x);
         arp_seq[2] = intervalFromSemi(y);
     }
@@ -227,6 +236,15 @@ public:
     {
         tick += ticks;
         arp_current = arp_seq[int(tick/2) % 3]; // FIXME: what is this about?
+    }
+
+    void doLines(float lines)
+    {
+        line += lines;
+        if (line >= 1) {
+            line = 0;
+            resetEffects();
+        }
     }
 };
 
@@ -368,13 +386,23 @@ public:
                 sleep_lines[column] += cmd.param_xy;
                 break;
             case Volume:
-                channel[column].sampler()->setVolume((float)cmd.param_xy / 80.0);
+                sampler->setVolume((float)cmd.param_xy / 80.0);
                 break;
             case Instrument: {
                 auto &ins = song.ins[cmd.param_xy];
                 auto sid = ins.smp[0].sampledata_id;
                 channel[column].setInstrument(ins, decoded_sample[sid].get());
+                break;
             }
+            case FxArp:
+                sampler->setArpeggio(cmd.param.x, cmd.param.y);
+                break;
+            case FxVibrato:
+                sampler->setVibrato(cmd.param.x*20.0, cmd.param.y/256.0);
+                break;
+            case FxTempo:
+                setBPM(cmd.param_xy);
+                break;
         }
     }
 
@@ -382,7 +410,7 @@ public:
     {
         if (lines_left <= 0) {
             nextPattern();
-            lines_left += currentPattern().lines;
+            lines_left = currentPattern().lines;
             for (size_t i = 0; i < ch_count; i++) {
                 cmd_i[i] = 0;
                 sleep_lines[i] = 0;
@@ -401,6 +429,7 @@ public:
             }
             channel[i].sampler()->doTicks(samples / samples_tick);
             sleep_lines[i] -= samples / samples_tick / (float)ticks_line;
+            channel[i].sampler()->doLines(samples / samples_tick / (float)ticks_line);
         }
 
         lines_left -= samples / samples_tick / (float)ticks_line;
@@ -427,7 +456,7 @@ public:
 
     void setTicks(int ticks) { ticks_line = ticks; recalculateSamplesTick(); }
     void setLines(int lines) { lines_beat = lines; recalculateSamplesTick(); }
-    void setBPM(int bpm) { this->bpm = bpm; recalculateSamplesTick(); }
+    void setBPM(int bpm) { this->bpm = bpm; recalculateSamplesTick(); log::info("bpm: %f", this->bpm); }
 };
 
 }

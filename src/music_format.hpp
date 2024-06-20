@@ -123,6 +123,7 @@ enum class CommandType : uint8_t {
     FxFadein,
     FxReverse,
     FxOffset,
+    FxTempo,
 };
 
 struct Command {

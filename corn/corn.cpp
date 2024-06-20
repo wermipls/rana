@@ -37,6 +37,17 @@ int val_int(pugi::xml_node node, const char *name, int fallback)
     }
 }
 
+int val_hex(pugi::xml_node node, const char *name, int fallback)
+{
+    try {
+        return std::stoi(node.child_value(name), 0, 16);
+    }
+    catch (const std::invalid_argument &e) {
+        log::warn("could not parse %s, using fallback value %d", name, fallback);
+        return fallback;
+    }
+}
+
 int val_int_req(pugi::xml_node node, const char *name)
 {
     try {
@@ -365,8 +376,68 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         ch[col_i].rows.push_back(cmd);
                     }
 
+                    if (val(nc, "EffectNumber") == "0A") {
+                        cmd.type = FxArp;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        ch[col_i].rows.push_back(cmd);
+                    }
+
+                    if (val(nc, "EffectNumber") == "0V") {
+                        cmd.type = FxVibrato;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        ch[col_i].rows.push_back(cmd);
+                    }
+
                     col_i++;
                 }
+
+                for (auto &ec : line.child("EffectColumns").children("EffectColumn")) {
+                    rana::musfmt::Command cmd{};
+
+                    if (val(ec, "Number") == "0A") {
+                        cmd.type = FxArp;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (val(ec, "Number") == "0V") {
+                        cmd.type = FxVibrato;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (val(ec, "Number") == "ZT") {
+                        if (auto delta = line_index - prev_index[0]; delta != 0) {
+                            if (delta < 0) {
+                                log::err("lines are not sequential, aborting...");
+                                abort();
+                            }
+
+                            cmd.type = SleepLines;
+                            cmd.param_xy = delta;
+                            ch[0].rows.push_back(cmd);
+                            prev_index[0] = line_index;
+                        }
+                        cmd.type = FxTempo;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        ch[0].rows.push_back(cmd);
+                        prev_index[0] = line_index;
+                        continue;
+                    } else {
+                        continue;
+                    }
+
+                    for (int i = 0; i < ch.size(); i++) {
+                        if (auto delta = line_index - prev_index[i]; delta != 0) {
+                            if (delta < 0) {
+                                log::err("lines are not sequential, aborting...");
+                                abort();
+                            }
+
+                            cmd.type = SleepLines;
+                            cmd.param_xy = delta;
+                            ch[i].rows.push_back(cmd);
+                            prev_index[i] = line_index;
+                        }
+                        ch[i].rows.push_back(cmd);
+                        prev_index[col_i] = line_index;
+                    }
+                }
+
             }
             track_i++;
             p.ch.insert(p.ch.end(), ch.begin(), ch.end());
