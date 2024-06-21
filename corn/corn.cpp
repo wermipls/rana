@@ -297,7 +297,8 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
 
     auto soloed = val_bool(t, "Soloed");
 
-    auto mixer = t.child("FilterDevices").child("Devices").child("TrackMixerDevice");
+    auto devices = t.child("FilterDevices").child("Devices");
+    auto mixer = devices.child("TrackMixerDevice");
     auto is_active =  val_double(mixer.child("IsActive"),    "Value", 1.0) >= 1;
     auto pre_pan    = val_double(mixer.child("Panning"),     "Value", 0.5);
     auto pre_volume = val_double(mixer.child("Volume"),      "Value", 1.0);
@@ -319,6 +320,30 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
     }
     if (surround > 0.0) {
         log::warn("mixer track width parameter is unsupported");
+    }
+
+    for (auto &n : devices.children("AudioPluginDevice")) {
+        struct musfmt::Effect fx;
+        auto pid = val(n, "PluginIdentifier");
+        using enum musfmt::EffectType;
+        if (pid == "ranaReverb") {
+            fx.type = Reverb;
+        } else if (pid == "ranaDelay") {
+            fx.type = Delay;
+        } else if (pid == "ranaLowpass") {
+            fx.type = Lowpass;
+        } else if (pid == "ranaHighpass") {
+            fx.type = Highpass;
+        } else {
+            log::warn("ignoring unsupported plugin %s", pid.c_str());
+            continue;
+        }
+
+        for (auto &p : n.child("Parameters").children("Parameter")) {
+            fx.param.push_back(val_double(p, "Value", 0.0));
+        }
+
+        track.fx.push_back(fx);
     }
 
     return track;

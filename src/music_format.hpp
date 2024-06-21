@@ -101,11 +101,37 @@ struct Instrument : public Serializable {
     }
 };
 
+enum class EffectType : uint8_t {
+    Lowpass,
+    Highpass,
+    Reverb,
+    Delay,
+};
+
+struct Effect : public Serializable {
+    EffectType type;
+    std::vector<double> param;
+
+    virtual void serialize(Serializer &s)
+    {
+        s.int8((uint8_t *)&type);
+
+        uint8_t size = param.size();
+        s.int8(&size);
+        param.resize(size);
+        for (auto &n : param) {
+            s.float64(&n);
+        }
+    }
+};
+
 struct MixerTrack : public Serializable {
     std::string name;
     uint8_t columns;
     double volume;
     double pan;
+
+    std::vector<Effect> fx;
 
     virtual void serialize(Serializer &s)
     {
@@ -113,6 +139,13 @@ struct MixerTrack : public Serializable {
         s.int8(&columns);
         s.float64(&volume);
         s.float64(&pan);
+
+        uint8_t size = fx.size();
+        s.int8(&size);
+        fx.resize(size);
+        for (auto &n : fx) {
+            n.serialize(s);
+        }
     }
 };
 
@@ -122,6 +155,8 @@ struct Mixer : public Serializable {
 
     virtual void serialize(Serializer &s)
     {
+        s.float64(&master_volume);
+
         uint32_t size = tracks.size();
         s.int32(&size);
         tracks.resize(size);

@@ -60,40 +60,6 @@ public:
     virtual ~Generator() = default;
 };
 
-class Track {
-    std::vector<Generator *> sources;
-
-public:
-    void addSource(Generator *source)
-    {
-        sources.push_back(source);
-    }
-
-    void removeSource(Generator *source)
-    {
-        for (size_t i = 0; i < sources.size(); i++) {
-            if (sources[i] == source) {
-                sources.erase(sources.begin() + i);
-            }
-        }
-    }
-
-    std::vector<SampleStereo> getSamples(size_t n_samples)
-    {
-        std::vector<SampleStereo> mix(n_samples);
-
-        for (auto &src : sources) {
-            auto samples = src->getSamples(n_samples);
-            for (size_t i = 0; i < n_samples; i++) {
-                mix[i].l += samples[i].l;
-                mix[i].r += samples[i].r;
-            }
-        }
-
-        return mix;
-    }
-};
-
 class Sine : public Generator {
     float t = 0;
     float volume_target;

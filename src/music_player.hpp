@@ -336,6 +336,48 @@ public:
     }
 };
 
+class Track {
+    float sr;
+    std::vector<std::unique_ptr<Effect>> fx;
+
+public:
+    Track(std::vector<musfmt::Effect> &fx, float sample_rate) : sr{sample_rate}
+    {
+        for (auto &n : fx) {
+            addEffect(n);
+        }
+    }
+
+    void addEffect(musfmt::Effect &effect)
+    {
+        Effect *instance = nullptr;
+        using enum musfmt::EffectType;
+        switch (effect.type) {
+            case Lowpass:   instance = new audio::Filter1Pole(sr, false); break;
+            case Highpass:  instance = new audio::Filter1Pole(sr, true); break;
+            case Reverb:    instance = new audio::Reverb(); break;
+            case Delay:     instance = new audio::Delay(sr); break;
+        }
+
+        if (instance == nullptr) {
+            return;
+        }
+
+        for (size_t i = 0; i < effect.param.size(); i++) {
+            instance->setParam(i, effect.param[i]);
+        }
+
+        fx.push_back(std::unique_ptr<Effect>(instance));
+    }
+
+    void process(SampleStereo *in, size_t n_samples)
+    {
+        for (auto &n : fx) {
+            n->process(in, n_samples);
+        }
+    }
+};
+
 class MusicPlayer {
     const musfmt::Song song;
     const float sr;
@@ -355,6 +397,7 @@ class MusicPlayer {
     int sequence_pos = 0;
 
     std::vector<uint8_t> ch_to_track;
+    std::vector<Track> tracks;
 
     void recalculateSamplesTick()
     {
@@ -395,6 +438,7 @@ public:
 
         for (int i = 0; i < song.mixer.tracks.size(); i++) {
             auto &track = song.mixer.tracks[i];
+            tracks.push_back(Track(track.fx, sr));
             for (int j = 0; j < track.columns; j++) {
                 ch_to_track.push_back(i);
             } 
@@ -480,11 +524,24 @@ public:
     {
         doSequence(n_samples);
 
-        std::vector<SampleStereo> samples(n_samples); 
+        std::vector<SampleStereo> samples(n_samples);
 
-        for (int i = 0; i < channel.size(); i++) {
-            auto &track = song.mixer.tracks[ch_to_track[i]];
-            channel[i].getSamples(samples, track.volume);
+        for (size_t i = 0; i < tracks.size(); i++) {
+            std::vector<SampleStereo> track_buf(n_samples);
+
+            for (size_t j = 0; j < ch_to_track.size(); j++) {
+                if (ch_to_track[j] == i) {
+                    channel[j].getSamples(track_buf, 1.0);
+                }
+            }
+
+            tracks[i].process(track_buf.data(), track_buf.size());
+            auto volume = song.mixer.tracks[i].volume;
+
+            for (size_t j = 0; j < samples.size(); j++) {
+                samples[j].l += track_buf[j].l * volume;
+                samples[j].r += track_buf[j].r * volume;
+            }
         }
 
         for (auto &n : samples) {

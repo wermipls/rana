@@ -9,6 +9,7 @@ class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
     virtual void setParam(int index, float value) = 0;
+    virtual ~Effect() = default;
 };
 
 class Filter1Pole : public Effect {
