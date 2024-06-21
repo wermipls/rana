@@ -125,10 +125,6 @@ static void update(fv_Context *ctx) {
 
   ctx->lp_coeff = filter_coeff(ctx->lp_cutoff, ctx->sr);
   ctx->hp_coeff = filter_coeff(ctx->hp_cutoff, ctx->sr);
-
-  char buf[64];
-  snprintf(buf, sizeof(buf), "coeffs: %f, %f. sr %f", ctx->lp_coeff, ctx->hp_coeff, ctx->sr);
-  OutputDebugStringA(buf);
 }
 
 
