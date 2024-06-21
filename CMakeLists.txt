@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 add_subdirectory(corn)
 
-project(rana CXX)
+project(rana C CXX)
 
 if(NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     # Git auto-ignore out-of-source build directory
@@ -26,6 +26,7 @@ set(BUILD_SHARED_LIBS OFF)
 add_executable(rana WIN32
     src/main.cpp
     src/gfx.cpp
+    src/freeverb/freeverb.c
 )
 
 target_include_directories(rana PRIVATE external)

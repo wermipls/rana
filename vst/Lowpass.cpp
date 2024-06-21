@@ -3,35 +3,38 @@
 using namespace rana::audio;
 
 struct EffectImpl : public EffectWrapper {
-    Lowpass fx;
+    Filter1Pole fx;
 
     EffectImpl()
     {
-        params.push_back({"cutoff", "Hz", "", 1, 10000, 3000});
-        fx = Lowpass(44100);
+        params.push_back({"cutoff", 0.5});
+        fx = Filter1Pole(44100, false);
     }
 
     void vstSetSamplingRate(float sr)
     {
-        fx = Lowpass(sr);
+        fx = Filter1Pole(sr);
     }
 
     void vstSetParam(int index, float value)
     {
-        auto adjusted = norm2float(value, params[index].min, params[index].max);
-        params[index].value = adjusted;
-        switch (index) {
-            case 0: fx.setCutoff(adjusted); break;
-        }
+        params[index].value = value;
+        fx.setParam(index, value);
     }
 
     std::vector<SampleStereo> process(std::vector<SampleStereo> in)
     {
-        return fx.process(in);
+        fx.process(in.data(), in.size());
+        return in;
     }
 };
 
 EffectWrapper *newEffect()
 {
     return new EffectImpl(); 
+}
+
+int getParamCount()
+{
+    return 1;
 }

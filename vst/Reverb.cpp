@@ -3,17 +3,20 @@
 using namespace rana::audio;
 
 struct EffectImpl : public EffectWrapper {
-    Filter1Pole fx;
+    Reverb fx;
 
     EffectImpl()
     {
-        params.push_back({"cutoff", 0.5});
-        fx = Filter1Pole(44100, true);
+        params.push_back({"wet", 0.25});
+        params.push_back({"dry", 0.5});
+        params.push_back({"width", 1.0});
+        params.push_back({"roomsize", 0.5});
+        params.push_back({"damp", 0.5});
+        fx = Reverb();
     }
 
     void vstSetSamplingRate(float sr)
     {
-        fx = Filter1Pole(sr);
     }
 
     void vstSetParam(int index, float value)
@@ -36,5 +39,5 @@ EffectWrapper *newEffect()
 
 int getParamCount()
 {
-    return 1;
+    return 5;
 }

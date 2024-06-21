@@ -14,50 +14,8 @@
     #define PLUGIN_VENDOR "default"
 #endif
 
-int clamp(int a, int min, int max)
-{
-    if (a < min) return min;
-    if (a > max) return max;
-    return a;
-}
-
-float int2float(int a, int min, int max)
-{
-    a = clamp(a, min, max);
-    a = a - min;
-    float div = max - min;
-    return (float)a / div;
-}
-
-int float2int(float a, int min, int max)
-{
-    float mul = max - min;
-    a *= mul;
-    a += min;
-    return clamp(a, min, max);
-}
-
-float float2norm(int a, float min, float max)
-{
-    a = clamp(a, min, max);
-    a = a - min;
-    float div = max - min;
-    return (float)a / div;
-}
-
-int norm2float(float a, float min, float max)
-{
-    float mul = max - min;
-    a *= mul;
-    a += min;
-    return a;
-}
-
 struct Param {
     const char *name;
-    const char *label;
-    char valstr[kVstMaxParamStrLen];
-    const float min, max;
     float value;
 };
 
@@ -131,7 +89,7 @@ float VstEffect::getParameter(VstInt32 index)
 {
     if (index >= fx->params.size()) return 0;
     auto &p = fx->params[index];
-    return float2norm(p.value, p.min, p.max);
+    return p.value;
 }
 
 void VstEffect::getParameterName(VstInt32 index, char *label) 
@@ -152,7 +110,7 @@ void VstEffect::getParameterLabel(VstInt32 index, char *label)
 {
     if (index >= fx->params.size()) return;
     auto &p = fx->params[index];
-    vst_strncpy(label, p.label, kVstMaxParamStrLen);
+    vst_strncpy(label, "", kVstMaxParamStrLen);
 }
 
 AudioEffect *createEffectInstance(audioMasterCallback audioMaster) 
@@ -161,8 +119,9 @@ AudioEffect *createEffectInstance(audioMasterCallback audioMaster)
 }
 
 EffectWrapper *newEffect();
+int getParamCount();
 
-VstEffect::VstEffect(audioMasterCallback audioMaster) : AudioEffectX(audioMaster, 1, 1)
+VstEffect::VstEffect(audioMasterCallback audioMaster) : AudioEffectX(audioMaster, 1, getParamCount())
 {
     const char name[] = PLUGIN_NAME;
     setNumInputs(2);         // stereo in
