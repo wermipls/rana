@@ -30,6 +30,8 @@ extern "C" {
 #define FV_INITIALDRY     0.0
 #define FV_INITIALWIDTH   1.0
 #define FV_INITIALMODE    0.0
+#define FV_INITIALLOWPASS 1.0
+#define FV_INITIALHIPASS  0.0
 #define FV_INITIALSR      44100.0
 #define FV_FREEZEMODE     0.5
 
@@ -58,6 +60,10 @@ typedef struct {
   float wet, wet1, wet2;
   float dry;
   float width;
+  float sr;
+  float hp_l, hp_r, hp_cutoff, hp_coeff;
+  float lp_l, lp_r, lp_cutoff, lp_coeff;
+
   fv_Comb combl[FV_NUMCOMBS];
   fv_Comb combr[FV_NUMCOMBS];
   fv_Allpass allpassl[FV_NUMALLPASSES];
@@ -75,6 +81,8 @@ void fv_set_damp(fv_Context *ctx, float value);
 void fv_set_wet(fv_Context *ctx, float value);
 void fv_set_dry(fv_Context *ctx, float value);
 void fv_set_width(fv_Context *ctx, float value);
+void fv_set_highpass(fv_Context *ctx, float value);
+void fv_set_lowpass(fv_Context *ctx, float value);
 
 #endif
 

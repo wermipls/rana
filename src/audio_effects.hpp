@@ -74,6 +74,8 @@ public:
             case 2: fv_set_width(&ctx, value); break;
             case 3: fv_set_roomsize(&ctx, value); break;
             case 4: fv_set_damp(&ctx, value); break;
+            case 5: fv_set_lowpass(&ctx, value); break;
+            case 6: fv_set_highpass(&ctx, value); break;
         }
     }
 

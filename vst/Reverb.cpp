@@ -12,6 +12,8 @@ struct EffectImpl : public EffectWrapper {
         params.push_back({"width", 1.0});
         params.push_back({"roomsize", 0.5});
         params.push_back({"damp", 0.5});
+        params.push_back({"lowpass", 1.0});
+        params.push_back({"highpass", 0.0});
         fx = Reverb();
     }
 
@@ -39,5 +41,5 @@ EffectWrapper *newEffect()
 
 int getParamCount()
 {
-    return 5;
+    return 7;
 }
