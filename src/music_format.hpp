@@ -106,6 +106,7 @@ enum class EffectType : uint8_t {
     Highpass,
     Reverb,
     Delay,
+    Distortion,
 };
 
 struct Effect : public Serializable {

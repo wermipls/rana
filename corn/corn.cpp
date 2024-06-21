@@ -334,6 +334,8 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
             fx.type = Lowpass;
         } else if (pid == "ranaHighpass") {
             fx.type = Highpass;
+        } else if (pid == "ranaDistortion") {
+            fx.type = Distortion;
         } else {
             log::warn("ignoring unsupported plugin %s", pid.c_str());
             continue;

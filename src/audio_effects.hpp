@@ -5,6 +5,8 @@
 namespace rana {
 namespace audio {
 
+using std::min, std::max, std::pow, std::fmod, std::abs, std::copysign;
+
 class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
@@ -34,7 +36,7 @@ public:
     virtual void setParam(int index, float value)
     {
         switch (index) {
-            case 0: setCutoff(std::pow(value, 2) * 19980 + 20); break;
+            case 0: setCutoff(pow(value, 2) * 19980 + 20); break;
         }
     }
 
@@ -139,6 +141,104 @@ public:
             buffer[buffer_pos].r = in[i].r + delay_sample.r * feedback; 
             in[i].l = in[i].l * dry + delay_sample.l * wet;
             in[i].r = in[i].r * dry + delay_sample.r * wet;
+        }
+    }
+};
+
+class Distortion : public Effect {
+    static constexpr float gain_multi = 127;
+    enum Mode {
+        Softclip,
+        Shape,
+        Fold,
+        BadFold,
+    } mode;
+    float gain = 1;
+    float dry = 0;
+    float wet = 1;
+
+public:
+    Distortion()
+    {
+        mode = Fold;
+    }
+
+    void setAmount(float value)
+    {
+        gain = pow(value, 3) * gain_multi + 1;
+    }
+
+    void setMix(float value)
+    {
+        dry = 1.0f - value;
+        wet = value;
+    }
+
+    void setMode(float value)
+    {
+        int i = value * 3;
+        mode = (Mode)i;
+    }
+
+    virtual void setParam(int index, float value)
+    {
+        switch (index) {
+            case 0: setAmount(value); break;
+            case 1: setMix(value); break;
+            case 2: setMode(value); break;
+        }
+    }
+
+    virtual void process(SampleStereo *in, size_t n)
+    {
+        switch (mode) 
+        {
+        case Softclip:
+            for (size_t i = 0; i < n; i++) {
+                auto old = in[i];
+                in[i].l = old.l * dry + max(min(in[i].l * gain, 1.0f), -1.0f) * wet;
+                in[i].r = old.r * dry + max(min(in[i].r * gain, 1.0f), -1.0f) * wet;
+            }
+            break;
+        case Shape:
+            for (size_t i = 0; i < n; i++) {
+                auto old = in[i];
+                auto ls = copysign(1.0f, in[i].l);
+                auto rs = copysign(1.0f, in[i].r);
+                in[i].l = old.l * dry + max(min(pow(abs(in[i].l), 1.0f / gain), 1.0f), -1.0f) * ls * wet;
+                in[i].r = old.r * dry + max(min(pow(abs(in[i].r), 1.0f / gain), 1.0f), -1.0f) * rs * wet;
+            }
+            break;
+        case Fold:
+            for (size_t i = 0; i < n; i++) {
+                auto ls = copysign(1.0f, in[i].l);
+                auto rs = copysign(1.0f, in[i].r);
+                auto l = abs(in[i].l * gain);
+                auto r = abs(in[i].r * gain);
+                auto lf = fmod(l + 1.0f, 4.0f);
+                auto rf = fmod(r + 1.0f, 4.0f);
+                l = fmod(l + 1.0f, 2.0f);
+                r = fmod(r + 1.0f, 2.0f);
+                if (lf >= 2.0f) l = 2.0f - l;
+                if (rf >= 2.0f) r = 2.0f - r;
+                in[i].l = in[i].l * dry + (l - 1.0) * ls * wet;
+                in[i].r = in[i].r * dry + (r - 1.0) * rs * wet;
+            }
+            break;
+        case BadFold:
+            for (size_t i = 0; i < n; i++) {
+                auto l = in[i].l * gain;
+                auto r = in[i].r * gain;
+                l = fmod(l, 1.0f);
+                r = fmod(r, 1.0f);
+                auto lf = abs(fmod(in[i].l, 2.0f));
+                auto rf = abs(fmod(in[i].r, 2.0f));
+                lf = (lf > 1.0f) ? -1.0f : 1.0f;
+                rf = (rf > 1.0f) ? -1.0f : 1.0f;
+                in[i].l = in[i].l * dry + l * lf * wet;
+                in[i].r = in[i].r * dry + r * rf * wet;
+            }
+            break;
         }
     }
 };

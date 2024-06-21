@@ -7,6 +7,11 @@
 namespace rana {
 namespace audio {
 
+double from_dB(double a)
+{
+    return std::pow(10, a/20);
+}
+
 double intervalFromSemi(double semitones)
 {
     return std::pow(2, (double)semitones / 12.0);
@@ -233,6 +238,8 @@ public:
 
         for (auto &a : buf) {
             updateVolume();
+            doSeconds(1.0f / sr);
+            updateADSR();
             smp = getSample(smpdat, sample_pos);
             float tt = t;
             if (sample.interpolation == None) {
@@ -283,7 +290,6 @@ public:
 
 class Channel {
     static constexpr auto voices = 2;
-    float sr = 44100;
 
     std::vector<MusicSampler> samplers;
     size_t current = 0;
@@ -292,11 +298,6 @@ public:
     Channel()
     {
         samplers.resize(voices);
-    }
-
-    void setSampleRate(float sample_rate)
-    {
-        sr = sample_rate;
     }
 
     MusicSampler *sampler()
@@ -325,7 +326,6 @@ public:
         auto size = out.size();
 
         for (size_t i = 0; i < voices; i++) {
-            samplers[i].doSeconds(size / sr);
             auto sampler_out = samplers[i].getSamples(size);
 
             for (size_t j = 0; j < size; j++) {
@@ -353,10 +353,11 @@ public:
         Effect *instance = nullptr;
         using enum musfmt::EffectType;
         switch (effect.type) {
-            case Lowpass:   instance = new audio::Filter1Pole(sr, false); break;
-            case Highpass:  instance = new audio::Filter1Pole(sr, true); break;
-            case Reverb:    instance = new audio::Reverb(); break;
-            case Delay:     instance = new audio::Delay(sr); break;
+            case Lowpass:    instance = new audio::Filter1Pole(sr, false); break;
+            case Highpass:   instance = new audio::Filter1Pole(sr, true); break;
+            case Reverb:     instance = new audio::Reverb(); break;
+            case Delay:      instance = new audio::Delay(sr); break;
+            case Distortion: instance = new audio::Distortion(); break;
         }
 
         if (instance == nullptr) {
@@ -430,7 +431,6 @@ public:
         sleep_lines.resize(ch_count);
         channel.resize(ch_count);
         for (auto &n : channel) {
-            n.setSampleRate(sr);
             auto sampler = n.sampler();
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
@@ -531,7 +531,7 @@ public:
 
             for (size_t j = 0; j < ch_to_track.size(); j++) {
                 if (ch_to_track[j] == i) {
-                    channel[j].getSamples(track_buf, 1.0);
+                    channel[j].getSamples(track_buf, from_dB(-6));
                 }
             }
 
@@ -542,11 +542,6 @@ public:
                 samples[j].l += track_buf[j].l * volume;
                 samples[j].r += track_buf[j].r * volume;
             }
-        }
-
-        for (auto &n : samples) {
-            n.l *= 0.5;
-            n.r *= 0.5;
         }
 
         return samples;
