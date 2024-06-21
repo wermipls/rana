@@ -67,8 +67,26 @@ struct Sample : public Serializable {
     }
 };
 
+struct ADSR : public Serializable {
+    double attack  = 0.0;
+    double hold    = 0.0;
+    double decay   = 0.0;
+    double sustain = 1.0;
+    double release = 1.0;
+
+    virtual void serialize(Serializer &s)
+    {
+        s.float64(&attack);
+        s.float64(&hold);
+        s.float64(&decay);
+        s.float64(&sustain);
+        s.float64(&release);
+    }
+};
+
 struct Instrument : public Serializable {
     std::vector<Sample> smp;
+    ADSR adsr_volume;
 
     virtual void serialize(Serializer &s)
     {
@@ -78,6 +96,8 @@ struct Instrument : public Serializable {
         for (auto &n : smp) {
             n.serialize(s);
         }
+
+        adsr_volume.serialize(s);
     }
 };
 

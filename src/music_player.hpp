@@ -51,6 +51,9 @@ class MusicSampler {
     float t = 0;
     SampleStereo prev{};
 
+    musfmt::ADSR adsr;
+    float adsr_multi = 1;
+
     float vibrato_phase = 0;
     float vibrato_speed = 0;
     float vibrato_intensity = 0;
@@ -119,6 +122,28 @@ class MusicSampler {
         setVibrato(0,0);
     }
 
+    void updateADSR()
+    {
+        float t = 0;
+        t += adsr.attack;
+        if (time_since_trigger < t) {
+            adsr_multi = time_since_trigger / t;
+            return;
+        }
+        t += adsr.hold;
+        if (time_since_trigger < t) {
+            return;
+        }
+        float u = t + adsr.decay;
+        if (time_since_trigger < u) {
+            adsr_multi = 1.0 - (time_since_trigger - t) / adsr.decay;
+            adsr_multi = adsr.sustain + (adsr_multi * (1.0 - adsr.sustain));
+            return;
+        }
+
+        adsr_multi = adsr.sustain;
+    }
+
 public:
     MusicSampler()
     {
@@ -177,6 +202,8 @@ public:
 
         sample.transpose_fine = intervalFromSemi((double)s.transpose + (double)s.fine / 127);
         sample.transpose_fine *= (smp->rate / sr);
+
+        adsr = ins.adsr_volume;
     }
 
     bool isDisabled() {
@@ -213,8 +240,8 @@ public:
             }
             a.l = smp.l * tt + prev.l * (1.f - tt);
             a.r = smp.r * tt + prev.r * (1.f - tt);
-            a.l *= volume_actual * sample.volume;//a.l *= volume * pan_factors.l;
-            a.r *= volume_actual * sample.volume;//a.r *= volume * pan_factors.r;
+            a.l *= volume_actual * adsr_multi * sample.volume;//a.l *= volume * pan_factors.l;
+            a.r *= volume_actual * adsr_multi * sample.volume;//a.r *= volume * pan_factors.r;
             if (sample.interpolation != Linear) {
                 prev = smp;
             }
@@ -246,10 +273,17 @@ public:
             resetEffects();
         }
     }
+
+    void doSeconds(float seconds)
+    {
+        updateADSR();
+        time_since_trigger += seconds;
+    }
 };
 
 class Channel {
     static constexpr auto voices = 2;
+    float sr = 44100;
 
     std::vector<MusicSampler> samplers;
     size_t current = 0;
@@ -258,6 +292,11 @@ public:
     Channel()
     {
         samplers.resize(voices);
+    }
+
+    void setSampleRate(float sample_rate)
+    {
+        sr = sample_rate;
     }
 
     MusicSampler *sampler()
@@ -286,6 +325,7 @@ public:
         auto size = out.size();
 
         for (size_t i = 0; i < voices; i++) {
+            samplers[i].doSeconds(size / sr);
             auto sampler_out = samplers[i].getSamples(size);
 
             for (size_t j = 0; j < size; j++) {
@@ -347,6 +387,7 @@ public:
         sleep_lines.resize(ch_count);
         channel.resize(ch_count);
         for (auto &n : channel) {
+            n.setSampleRate(sr);
             auto sampler = n.sampler();
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());

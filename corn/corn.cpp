@@ -230,6 +230,65 @@ musfmt::Sample parse_sample(pugi::xml_node &smp)
     return sample;
 }
 
+double adsr_length_to_seconds(double length)
+{
+    return std::pow(length, 3) * 60.0;
+}
+
+void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
+{
+    size_t ins_count = 0;
+    for (auto ins : rnsong.child("Instruments").children("Instrument")) {
+        auto name = val(ins, "Name");
+
+        log::info("parsing instrument %d: '%s'", ins_count, name.c_str());
+        ins_count++;
+
+        struct musfmt::Instrument instrument = {};
+
+        for (auto smp : ins.child("SampleGenerator").child("Samples").children("Sample")) {
+            musfmt::Sample sample = parse_sample(smp);
+
+            log::info("  sample: '%s'", val(smp, "Name").c_str());
+            log::info("    volume: %.2f dB", dB(sample.volume));
+            log::info("    pan: %.2f", sample.pan);
+            log::info("    transpose: %d", sample.transpose);
+            log::info("    fine: %d", sample.fine);
+
+            instrument.smp.push_back(sample);
+        }
+
+        bool has_volume_adsr = false;
+
+        auto devices = ins.child("SampleGenerator")
+                          .child("ModulationSets")
+                          .child("ModulationSet")
+                          .child("Devices");
+        for (auto &n : devices.children("SampleAhdsrModulationDevice")) {
+            if (val(n, "Target") != "Volume") {
+                log::warn("unsupported adsr target; only volume is supported");
+                continue;
+            }
+            if (has_volume_adsr) {
+                log::warn("multiple adsr in one instrument are unsupported");
+                continue;
+            }
+            has_volume_adsr = true;
+            auto &adsr = instrument.adsr_volume;
+            adsr.attack   = adsr_length_to_seconds(val_double(n.child("Attack"),  "Value", 0.0));
+            adsr.hold     = adsr_length_to_seconds(val_double(n.child("Hold"),    "Value", 0.0));
+            adsr.decay    = adsr_length_to_seconds(val_double(n.child("Decay"),   "Value", 0.0));
+            adsr.sustain  = val_double(n.child("Sustain"), "Value", 1.0);
+            adsr.release  = adsr_length_to_seconds(val_double(n.child("Release"), "Value", 0.0));
+
+            log::info("    attack: %.3f, hold: %.3f, decay: %.3f, sustain: %.3f, release: %.3f",
+                adsr.attack, adsr.hold, adsr.decay, adsr.sustain, adsr.release);
+        }
+
+        song.ins.push_back(instrument);
+    }
+}
+
 musfmt::MixerTrack parse_track(pugi::xml_node &t)
 {
     musfmt::MixerTrack track{};
@@ -518,29 +577,7 @@ int main(int argc, char **argv)
     song.beat_lines = val_int(sd, "LinesPerBeat", 4);
     song.line_ticks = val_int(sd, "TicksPerLine", 12);
 
-    size_t ins_count = 0;
-    for (auto ins : rnsong.child("Instruments").children("Instrument")) {
-        auto name = val(ins, "Name");
-
-        log::info("parsing instrument %d: '%s'", ins_count, name.c_str());
-        ins_count++;
-
-        struct musfmt::Instrument instrument = {};
-
-        for (auto smp : ins.child("SampleGenerator").child("Samples").children("Sample")) {
-            musfmt::Sample sample = parse_sample(smp);
-
-            log::info("  sample: '%s'", val(smp, "Name").c_str());
-            log::info("    volume: %.2f dB", dB(sample.volume));
-            log::info("    pan: %.2f", sample.pan);
-            log::info("    transpose: %d", sample.transpose);
-            log::info("    fine: %d", sample.fine);
-
-            instrument.smp.push_back(sample);
-        }
-
-        song.ins.push_back(instrument);
-    }
+    parse_instruments(rnsong, song);
 
     find_sample_data(&zip, song);
 
