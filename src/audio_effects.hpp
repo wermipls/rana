@@ -85,5 +85,62 @@ public:
     }
 };
 
+class Delay : public Effect {
+    static constexpr auto max_delay_seconds = 5.0;
+    std::vector<SampleStereo> buffer;
+    size_t buffer_pos = 0;
+    size_t delay_size = 0;
+    float feedback = 0.25;
+    float wet = 0.25;
+    float dry = 1.0;
+
+public:
+    Delay(Hz sample_rate = 44100)
+    {
+        buffer.resize(sample_rate * max_delay_seconds);
+        for (auto &n : buffer) {
+            n.l = 0;
+            n.r = 0;
+        }
+
+        setDelay(0.2);
+    }
+
+    void setDelay(float value)
+    {
+        if (value > 1.0) value = 1.0;
+        if (value < 0.0) value = 0.0;
+
+        delay_size = buffer.size() * value;
+        if (delay_size == 0) delay_size = 1;
+        if (delay_size > buffer.size()) delay_size = buffer.size();
+
+        buffer_pos = buffer_pos % delay_size;
+    }
+
+    virtual void setParam(int index, float value)
+    {
+        switch (index) {
+            case 0: wet = value; break;
+            case 1: dry = value; break;
+            case 2: feedback = value; break;
+            case 3: setDelay(value); break;
+        }
+    }
+
+    virtual void process(SampleStereo *in, size_t n)
+    {
+        for (size_t i = 0; i < n; i++) {
+            buffer_pos++;
+            buffer_pos = buffer_pos % delay_size;
+            auto delay_sample = buffer[buffer_pos];
+            buffer[buffer_pos].l = in[i].l + delay_sample.l * feedback;
+            buffer[buffer_pos].r = in[i].r + delay_sample.r * feedback; 
+            in[i].l = in[i].l * dry + delay_sample.l * wet;
+            in[i].r = in[i].r * dry + delay_sample.r * wet;
+        }
+    }
+};
+
 }
 }
