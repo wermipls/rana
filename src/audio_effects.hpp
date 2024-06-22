@@ -243,5 +243,81 @@ public:
     }
 };
 
+class Bitcrush : public Effect {
+    int bits = 16;
+    float sr, rate;
+    float t = 0;
+    SampleStereo prev = {0,0};
+
+    inline static int bitcrush(int a, int bits)
+    {
+        int shift = (16 - bits);
+        a = a >> shift;
+        if (a < 0) a++; // compensate for two's complement
+        return a << shift;
+    }
+
+    inline static int clamp(int a, int min, int max)
+    {
+        if (a < min) return min;
+        if (a > max) return max;
+        return a;
+    }
+
+    inline static int float2int(float a, int min, int max)
+    {
+        float mul = max - min;
+        a *= mul;
+        a += min;
+        return clamp(a, min, max);
+    }
+
+public:
+    Bitcrush(float sample_rate = 44100) : sr{sample_rate}
+    {
+        setRate(44100);
+    }
+
+    void setBits(float value)
+    {
+        bits = float2int(value, 2, 16);
+    }
+
+    void setRate(float value)
+    {
+        rate = 44100.0f * pow(value, 2);
+    }
+
+    virtual void setParam(int index, float value)
+    {
+        switch (index) {
+            case 0: setBits(value); break;
+            case 1: setRate(value); break;
+        }
+    }
+
+    virtual void process(SampleStereo *in, size_t n)
+    {
+        for (size_t i = 0; i < n; i++) {
+            // rate
+            t += rate / sr;
+            if (t >= 1.0f) {
+                t -= 1;
+                prev = in[i];
+            }
+
+            // bitcrush
+            int l = prev.l * 32768;
+            int r = prev.r * 32768;
+
+            l = bitcrush(l, bits);
+            r = bitcrush(r, bits);
+
+            in[i].l = l / 32768.f;
+            in[i].r = r / 32768.f;
+        }
+    }
+};
+
 }
 }
