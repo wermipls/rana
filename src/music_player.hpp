@@ -359,6 +359,7 @@ public:
             case Delay:      instance = new audio::Delay(sr); break;
             case Distortion: instance = new audio::Distortion(); break;
             case Bitcrush:   instance = new audio::Bitcrush(); break;
+            case Galactic:   instance = new audio::Galactic(); break;
         }
 
         if (instance == nullptr) {
