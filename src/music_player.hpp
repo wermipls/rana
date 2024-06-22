@@ -99,7 +99,7 @@ class MusicSampler {
 
     void updateVibrato(float deltatime)
     {
-        vibrato_phase += vibrato_speed * deltatime;
+        vibrato_phase += vibrato_speed * M_PI * 2.0f * deltatime;
         vibrato_current = 1 + std::sin(vibrato_phase) * vibrato_intensity;
         //log::info("p %f in %f sp %f cur %f", vibrato_phase, vibrato_intensity, vibrato_speed, vibrato_current);
     }
@@ -483,7 +483,10 @@ public:
                 sampler->setArpeggio(cmd.param.x, cmd.param.y);
                 break;
             case FxVibrato:
-                sampler->setVibrato(cmd.param.x*20.0, cmd.param.y/256.0);
+                sampler->setVibrato(
+                    (float)cmd.param.x/15.0f * sr / (samples_tick * (float)ticks_line),
+                    (std::pow(2.0f, 2.0f/12.0f) - 1.0f) * (float)cmd.param.y/15.0f
+                );
                 break;
             case FxTempo:
                 setBPM(cmd.param_xy);
