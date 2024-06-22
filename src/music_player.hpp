@@ -448,7 +448,7 @@ public:
     void nextPattern()
     {
         sequence_pos++;
-        if (sequence_pos >= song.loop_end) {
+        if (sequence_pos > song.loop_end) {
             sequence_pos = song.loop_start;
         }
     }
