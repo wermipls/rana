@@ -107,6 +107,7 @@ enum class EffectType : uint8_t {
     Reverb,
     Delay,
     Distortion,
+    Bitcrush,
 };
 
 struct Effect : public Serializable {

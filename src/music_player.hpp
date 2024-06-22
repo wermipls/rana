@@ -358,6 +358,7 @@ public:
             case Reverb:     instance = new audio::Reverb(); break;
             case Delay:      instance = new audio::Delay(sr); break;
             case Distortion: instance = new audio::Distortion(); break;
+            case Bitcrush:   instance = new audio::Bitcrush(); break;
         }
 
         if (instance == nullptr) {
