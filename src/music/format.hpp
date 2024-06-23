@@ -43,8 +43,8 @@ struct SampleData : public Serializable {
 };
 
 struct Sample : public Serializable {
-    double volume;
-    double pan;
+    float volume;
+    float pan;
     int8_t transpose;
     int8_t fine;
     Interpolation interpolation;
@@ -55,8 +55,8 @@ struct Sample : public Serializable {
 
     virtual void serialize(Serializer &s)
     {
-        s.float64(&volume);
-        s.float64(&pan);
+        s.float32(&volume);
+        s.float32(&pan);
         s.int8(&transpose);
         s.int8(&fine);
         s.int8((uint8_t *)&interpolation);
@@ -68,19 +68,19 @@ struct Sample : public Serializable {
 };
 
 struct ADSR : public Serializable {
-    double attack  = 0.0;
-    double hold    = 0.0;
-    double decay   = 0.0;
-    double sustain = 1.0;
-    double release = 1.0;
+    float attack  = 0.0;
+    float hold    = 0.0;
+    float decay   = 0.0;
+    float sustain = 1.0;
+    float release = 1.0;
 
     virtual void serialize(Serializer &s)
     {
-        s.float64(&attack);
-        s.float64(&hold);
-        s.float64(&decay);
-        s.float64(&sustain);
-        s.float64(&release);
+        s.float32(&attack);
+        s.float32(&hold);
+        s.float32(&decay);
+        s.float32(&sustain);
+        s.float32(&release);
     }
 };
 
@@ -114,7 +114,7 @@ enum class EffectType : uint8_t {
 
 struct Effect : public Serializable {
     EffectType type;
-    std::vector<double> param;
+    std::vector<float> param;
 
     virtual void serialize(Serializer &s)
     {
@@ -124,7 +124,7 @@ struct Effect : public Serializable {
         s.int8(&size);
         param.resize(size);
         for (auto &n : param) {
-            s.float64(&n);
+            s.float32(&n);
         }
     }
 };
@@ -132,8 +132,8 @@ struct Effect : public Serializable {
 struct MixerTrack : public Serializable {
     std::string name;
     uint8_t columns;
-    double volume;
-    double pan;
+    float volume;
+    float pan;
 
     std::vector<Effect> fx;
 
@@ -141,8 +141,8 @@ struct MixerTrack : public Serializable {
     {
         s.string8(name);
         s.int8(&columns);
-        s.float64(&volume);
-        s.float64(&pan);
+        s.float32(&volume);
+        s.float32(&pan);
 
         uint8_t size = fx.size();
         s.int8(&size);
@@ -156,17 +156,18 @@ struct MixerTrack : public Serializable {
 struct Mixer : public Serializable {
     std::vector<MixerTrack> tracks;
     std::vector<Effect> master_fx;
+    float master_volume;
 
     virtual void serialize(Serializer &s)
     {
-        s.float64(&master_volume);
+        s.float32(&master_volume);
 
         { // tracks
             uint8_t size = tracks.size();
             s.int8(&size);
-        tracks.resize(size);
-        for (auto &n : tracks) {
-            n.serialize(s);
+            tracks.resize(size);
+            for (auto &n : tracks) {
+                n.serialize(s);
             }
         }
 
@@ -246,7 +247,7 @@ struct Pattern : public Serializable {
 };
 
 struct Song : public Serializable {
-    double bpm;
+    float bpm;
     uint8_t beat_lines;
     uint8_t line_ticks;
     std::vector<Instrument> ins;
@@ -259,7 +260,7 @@ struct Song : public Serializable {
 
     virtual void serialize(Serializer &s)
     {
-        s.float64(&bpm);
+        s.float32(&bpm);
         s.int8(&beat_lines);
         s.int8(&line_ticks);
 

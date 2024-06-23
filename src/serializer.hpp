@@ -105,6 +105,16 @@ public:
         }
     }
 
+    // FIXME: not portable
+    void float32(float *data)
+    {
+        if (reading) {
+            read(data, sizeof(float));
+        } else {
+            write(data, sizeof(float));
+        }
+    }
+
     // FIXME: use appropriate type serializers
     template<typename T> void vector(std::vector<T> &data) {
         if (reading) {
