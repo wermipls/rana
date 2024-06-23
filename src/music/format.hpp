@@ -155,17 +155,28 @@ struct MixerTrack : public Serializable {
 
 struct Mixer : public Serializable {
     std::vector<MixerTrack> tracks;
-    double master_volume;
+    std::vector<Effect> master_fx;
 
     virtual void serialize(Serializer &s)
     {
         s.float64(&master_volume);
 
-        uint32_t size = tracks.size();
-        s.int32(&size);
+        { // tracks
+            uint8_t size = tracks.size();
+            s.int8(&size);
         tracks.resize(size);
         for (auto &n : tracks) {
             n.serialize(s);
+            }
+        }
+
+        { // master fx
+            uint8_t size = master_fx.size();
+            s.int8(&size);
+            master_fx.resize(size);
+            for (auto &n : master_fx) {
+                n.serialize(s);
+            }
         }
     }
 };

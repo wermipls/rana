@@ -343,6 +343,10 @@ class Track {
     std::vector<std::unique_ptr<Effect>> fx;
 
 public:
+    Track(float sample_rate) : sr{sample_rate}
+    {
+    }
+
     Track(std::vector<musfmt::Effect> &fx, float sample_rate) : sr{sample_rate}
     {
         for (auto &n : fx) {
@@ -404,6 +408,7 @@ class MusicPlayer {
 
     std::vector<uint8_t> ch_to_track;
     std::vector<Track> tracks;
+    Track master;
 
     void recalculateSamplesTick()
     {
@@ -411,7 +416,7 @@ class MusicPlayer {
     }
 
 public:
-    MusicPlayer(musfmt::Song song, float sr = 44100) : song{song}, sr{sr}
+    MusicPlayer(musfmt::Song song, float sr = 44100) : song{song}, sr{sr}, master{sr}
     {
         bpm = song.bpm;
         ticks_line = song.line_ticks;
@@ -447,6 +452,10 @@ public:
             for (int j = 0; j < track.columns; j++) {
                 ch_to_track.push_back(i);
             } 
+        }
+
+        for (auto &n : song.mixer.master_fx) {
+            master.addEffect(n);
         }
     }
 
@@ -551,6 +560,8 @@ public:
                 samples[j].r += track_buf[j].r * volume;
             }
         }
+
+        master.process(samples.data(), samples.size());
 
         return samples;
     }

@@ -289,6 +289,41 @@ void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
     }
 }
 
+void parse_effects(pugi::xml_node &devices, std::vector<musfmt::Effect> &effects)
+{
+    for (auto &n : devices.children("AudioPluginDevice")) {
+        struct musfmt::Effect fx;
+        auto pid = val(n, "PluginIdentifier");
+        using enum musfmt::EffectType;
+        if (pid == "ranaReverb") {
+            fx.type = Reverb;
+        } else if (pid == "ranaDelay") {
+            fx.type = Delay;
+        } else if (pid == "ranaLowpass") {
+            fx.type = Lowpass;
+        } else if (pid == "ranaHighpass") {
+            fx.type = Highpass;
+        } else if (pid == "ranaDistortion") {
+            fx.type = Distortion;
+        } else if (pid == "ranaBitcrush") {
+            fx.type = Bitcrush;
+        } else if (pid == "ranaCompressor") {
+            fx.type = Compressor;
+        } else if (pid == "ranaGalactic") {
+            fx.type = Galactic;
+        } else {
+            log::warn("ignoring unsupported plugin %s", pid.c_str());
+            continue;
+        }
+
+        for (auto &p : n.child("Parameters").children("Parameter")) {
+            fx.param.push_back(val_double(p, "Value", 0.0));
+        }
+
+        effects.push_back(fx);
+    }
+}
+
 musfmt::MixerTrack parse_track(pugi::xml_node &t)
 {
     musfmt::MixerTrack track{};
@@ -322,37 +357,7 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
         log::warn("mixer track width parameter is unsupported");
     }
 
-    for (auto &n : devices.children("AudioPluginDevice")) {
-        struct musfmt::Effect fx;
-        auto pid = val(n, "PluginIdentifier");
-        using enum musfmt::EffectType;
-        if (pid == "ranaReverb") {
-            fx.type = Reverb;
-        } else if (pid == "ranaDelay") {
-            fx.type = Delay;
-        } else if (pid == "ranaLowpass") {
-            fx.type = Lowpass;
-        } else if (pid == "ranaHighpass") {
-            fx.type = Highpass;
-        } else if (pid == "ranaDistortion") {
-            fx.type = Distortion;
-        } else if (pid == "ranaBitcrush") {
-            fx.type = Bitcrush;
-        } else if (pid == "ranaCompressor") {
-            fx.type = Compressor;
-        } else if (pid == "ranaGalactic") {
-            fx.type = Galactic;
-        } else {
-            log::warn("ignoring unsupported plugin %s", pid.c_str());
-            continue;
-        }
-
-        for (auto &p : n.child("Parameters").children("Parameter")) {
-            fx.param.push_back(val_double(p, "Value", 0.0));
-        }
-
-        track.fx.push_back(fx);
-    }
+    parse_effects(devices, track.fx);
 
     return track;
 }
@@ -372,13 +377,14 @@ musfmt::Mixer parse_mixer(pugi::xml_node &rnsong)
     }
 
     auto master = rnsong.child("Tracks").child("SequencerMasterTrack");
-    auto master_device = master.child("FilterDevices")
-                               .child("Devices")
-                               .child("MasterTrackMixerDevice");
+    auto devices = master.child("FilterDevices").child("Devices");
+    auto master_device = devices.child("MasterTrackMixerDevice");
     mixer.master_volume = val_double(master_device.child("PostVolume"), "Value", 1.0);
     if (val_double(master_device.child("PostPanning"), "Value", 0.5) != 0.5) {
         log::warn("panning on master? be serious");
     }
+
+    parse_effects(devices, mixer.master_fx);
 
     return mixer;
 }
