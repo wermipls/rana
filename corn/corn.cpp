@@ -1,8 +1,8 @@
-#include "../src/serializer.hpp"
-#include "../src/log.hpp"
-#include "../src/music_format.hpp"
-#include "../src/fio.hpp"
-#include "../miniz/miniz.h"
+#include "serializer.hpp"
+#include "log.hpp"
+#include "music/format.hpp"
+#include "fio.hpp"
+#include "miniz/miniz.h"
 #include <pugixml.hpp>
 #include <cstdlib>
 #include <regex>

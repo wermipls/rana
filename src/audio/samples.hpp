@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <memory>
 
-#include "audio_common.hpp"
+#include "common.hpp"
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
 #include "log.hpp"

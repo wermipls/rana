@@ -16,9 +16,10 @@ set(BUILD_SHARED_LIBS OFF)
 # Your application target.
 add_executable(corn WIN32
     corn.cpp
-    ../miniz/miniz.c
+    miniz/miniz.c
 )
 
+target_include_directories(corn PRIVATE ../src)
 target_link_libraries(corn -static -fdiagnostics-color=always)
 target_compile_options(corn PRIVATE -ggdb -fdiagnostics-color=always)
 

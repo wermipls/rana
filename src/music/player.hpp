@@ -1,6 +1,8 @@
-#include "music_format.hpp"
-#include "audio.hpp"
-#include "audio_samples.hpp"
+#pragma once
+
+#include "music/format.hpp"
+#include "audio/audio.hpp"
+#include "audio/samples.hpp"
 #include <cmath>
 #include <memory>
 

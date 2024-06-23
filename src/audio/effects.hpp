@@ -1,4 +1,6 @@
-#include "audio_common.hpp"
+#pragma once
+
+#include "common.hpp"
 #include "freeverb/freeverb.h"
 #include <vector>
 

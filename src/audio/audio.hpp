@@ -5,8 +5,8 @@
 #include <string>
 #include <cstring>
 #include <SDL2/SDL.h>
-#include "audio_common.hpp"
-#include "audio_effects.hpp"
+#include "common.hpp"
+#include "effects.hpp"
 #include "log.hpp"
 
 namespace rana {

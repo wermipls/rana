@@ -26,10 +26,11 @@ set(BUILD_SHARED_LIBS OFF)
 add_executable(rana WIN32
     src/main.cpp
     src/gfx.cpp
-    src/freeverb/freeverb.c
+    src/audio/freeverb/freeverb.c
 )
 
 target_include_directories(rana PRIVATE external)
+target_include_directories(rana PRIVATE src)
 target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)
 
