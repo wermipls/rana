@@ -10,6 +10,8 @@
 
 using namespace rana;
 
+static bool g_strip_names = false;
+
 double dB(double volume)
 {
     return 20 * std::log10(volume);
@@ -327,7 +329,9 @@ void parse_effects(pugi::xml_node &devices, std::vector<musfmt::Effect> &effects
 musfmt::MixerTrack parse_track(pugi::xml_node &t)
 {
     musfmt::MixerTrack track{};
-    track.name = val(t, "Name");
+    if (!g_strip_names) {
+        track.name = val(t, "Name");
+    }
     track.columns = val_int(t, "NumberOfVisibleNoteColumns", 1);
 
     auto soloed = val_bool(t, "Soloed");
@@ -573,6 +577,13 @@ int main(int argc, char **argv)
     if (argc < 3) {
         log::info("usage: corn <input.xrns> <output.ranamus>");
         return -1;
+    }
+
+    for (int i = 2; i < argc; i++) {
+        std::string arg(argv[i]);
+        if (arg == "-s") {
+            g_strip_names = true;
+        }
     }
 
     char *infile = argv[1];
