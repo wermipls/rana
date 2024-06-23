@@ -331,7 +331,7 @@ class Compressor : public Effect {
     float attack_coeff;
     float release_coeff;
     float threshold_db = 0.8;
-    float volume_actual = 0;
+    float volume_actual = 1.0;
     float volume_target = 0;
     float makeup = 1;
     float ratio = 0.5;
