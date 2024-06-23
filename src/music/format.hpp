@@ -108,6 +108,7 @@ enum class EffectType : uint8_t {
     Delay,
     Distortion,
     Bitcrush,
+    Compressor,
     Galactic,
 };
 

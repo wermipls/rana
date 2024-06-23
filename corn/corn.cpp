@@ -338,6 +338,8 @@ musfmt::MixerTrack parse_track(pugi::xml_node &t)
             fx.type = Distortion;
         } else if (pid == "ranaBitcrush") {
             fx.type = Bitcrush;
+        } else if (pid == "ranaCompressor") {
+            fx.type = Compressor;
         } else if (pid == "ranaGalactic") {
             fx.type = Galactic;
         } else {

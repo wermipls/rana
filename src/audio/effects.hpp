@@ -321,6 +321,83 @@ public:
     }
 };
 
+class Compressor : public Effect {
+    static constexpr float PeakSmoothingHz = 20.0f;
+    float sr;
+    float pp_coeff;
+    float min = 0;
+    float max = 0;
+    float pp = 0;
+    float attack_coeff;
+    float release_coeff;
+    float threshold_db = 0.8;
+    float volume_actual = 0;
+    float volume_target = 0;
+    float makeup = 1;
+    float ratio = 0.5;
+
+    void peakToPeak(SampleStereo value)
+    {
+        max *= pp_coeff;
+        max = std::max(max,  value.l);
+        max = std::max(max,  value.r);
+        max = std::max(max, -value.l);
+        max = std::max(max, -value.r);
+        pp = dB(std::abs(max));
+    }
+
+    void processVolume()
+    {
+        if (volume_actual > volume_target) {
+            volume_actual += (volume_target - volume_actual) * attack_coeff;
+        } else {
+            volume_actual += (volume_target - volume_actual) * release_coeff;
+        }
+    }
+
+    static inline float dB(float volume)
+    {
+        return 20 * std::log10(volume);
+    }
+
+    static inline float from_dB(float a)
+    {
+        return std::pow(10, a/20);
+    }
+
+public:
+    Compressor(float sample_rate = 44100) : sr{sample_rate}
+    {
+        pp_coeff = 1.0f - factor_1pole(PeakSmoothingHz, sr);
+    }
+
+    virtual void setParam(int index, float value)
+    {
+        switch (index) {
+            case 0: threshold_db = dB(std::pow(value, 3) * 0.999f + 0.001f); break;
+            case 1: attack_coeff  = factor_1pole(1.0f + std::pow(1.0f - value, 10) * 22049.0f, sr); break;
+            case 2: release_coeff = factor_1pole(0.1f + std::pow(1.0f - value, 10) * 999.9f, sr); break;
+            case 3: ratio = value; break; 
+            case 4: makeup = std::pow(value, 3) * 16.0f + 1.0f; break;
+        }
+    }
+
+    virtual void process(SampleStereo *in, size_t n)
+    {
+        for (size_t i = 0; i < n; i++) {
+            peakToPeak(in[i]);
+            auto delta_db = pp - threshold_db;
+            auto target_db = 0;
+            if (delta_db > 0.0f) target_db -= delta_db * ratio;
+            volume_target = from_dB(target_db);
+            volume_target *= makeup;
+            processVolume();
+            in[i].l *= volume_actual;
+            in[i].r *= volume_actual;
+        }
+    }
+};
+
 // adapted from airwindows' Galactic effect plugin
 // airwindows uses the MIT license
 // https://github.com/airwindows/airwindows
