@@ -456,13 +456,13 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 
                     if (!nc.child("Instrument").empty()) {
                         cmd.type = Instrument;
-                        cmd.param_xy = val_int_req(nc, "Instrument");
+                        cmd.param_xy = val_hex(nc, "Instrument", 0);
                         ch[col_i].rows.push_back(cmd);
                     }
 
                     if (!nc.child("Volume").empty()) {
                         cmd.type = Volume;
-                        cmd.param_xy = val_int_req(nc, "Volume");
+                        cmd.param_xy = val_hex(nc, "Volume", 128);
                         ch[col_i].rows.push_back(cmd);
                     }
 

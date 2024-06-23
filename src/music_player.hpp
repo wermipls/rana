@@ -473,7 +473,7 @@ public:
                 sleep_lines[column] += cmd.param_xy;
                 break;
             case Volume:
-                sampler->setVolume((float)cmd.param_xy / 80.0);
+                sampler->setVolume((float)cmd.param_xy / 128.0);
                 break;
             case Instrument: {
                 auto &ins = song.ins[cmd.param_xy];
