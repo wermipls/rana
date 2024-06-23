@@ -12,7 +12,7 @@ CFLAGS = -shared -static-libgcc -static -Ofast \
 
 all: $(BIN)
 
-freeverb.o: ../src/freeverb/freeverb.c
+freeverb.o: ../src/audio/freeverb/freeverb.c
 	gcc $^ -Ofast -c -o freeverb.o
 
 bin/rana%.dll: %.cpp $(HEADERS) Makefile freeverb.o

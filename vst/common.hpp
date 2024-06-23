@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
-#include "../src/audio_effects.hpp"
+#include "../src/audio/effects.hpp"
 
 #ifndef PLUGIN_NAME
     #define PLUGIN_NAME "default"
