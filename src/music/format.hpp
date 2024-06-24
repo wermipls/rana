@@ -195,6 +195,10 @@ enum class CommandType : uint8_t {
     FxReverse,
     FxOffset,
     FxTempo,
+    FxGlide,
+    FxSlideUp,
+    FxSlideDown,
+    NoteLegato,
 };
 
 struct Command {

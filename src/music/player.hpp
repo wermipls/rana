@@ -51,6 +51,7 @@ class MusicSampler {
     bool note_triggered = 0; // true -> note has triggered this tick
     float pitch_actual = 0;
     float pitch_target = 0;
+    float pitch_tick_increment = 0;
     float time_since_trigger = 0; // in seconds; used for resolving adsr etc.
 
     PlaybackSample sample{};
@@ -92,6 +93,8 @@ class MusicSampler {
         arp_seq[2] = 1;
         arp_current = 1;
         tick = 0;
+
+        pitch_tick_increment = 0;
     }
 
     void updateVolume()
@@ -127,6 +130,7 @@ class MusicSampler {
     {
         setArpeggio(0,0);
         setVibrato(0,0);
+        pitch_tick_increment = 0;
     }
 
     void updateADSR()
@@ -151,6 +155,23 @@ class MusicSampler {
         adsr_multi = adsr.sustain;
     }
 
+    void updatePitch()
+    {
+        if (pitch_tick_increment == 0) return;
+
+        if (pitch_target > pitch_actual) {
+            pitch_actual *= pitch_tick_increment;
+            if (pitch_target <= pitch_actual) {
+                pitch_actual = pitch_target;
+            }
+        } else if (pitch_target < pitch_actual) {
+            pitch_actual /= pitch_tick_increment;
+            if (pitch_target >= pitch_actual) {
+                pitch_actual = pitch_target;
+            }
+        }
+    }
+
 public:
     MusicSampler()
     {
@@ -164,12 +185,15 @@ public:
         volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
     }
 
-    void setNote(uint8_t note)
+    void setNote(uint8_t note, bool legato = false)
     {
-        if (note) {
+        if (!note) return;
+        if (!legato) {
             resetState();
             pitch_actual = pitch_target = freqFromNote(note);
             note_triggered = true;
+        } else {
+            pitch_target = freqFromNote(note);
         }
     }
 
@@ -194,6 +218,17 @@ public:
         line = std::floor(line);
         arp_seq[1] = intervalFromSemi(x);
         arp_seq[2] = intervalFromSemi(y);
+    }
+
+    void setGlide(float semi_per_tick)
+    {
+        pitch_tick_increment = intervalFromSemi(semi_per_tick);
+    }
+
+    void setSlide(float semi, float ticks)
+    {
+        pitch_target *= intervalFromSemi(semi);
+        pitch_tick_increment = intervalFromSemi(abs(semi / ticks));
     }
 
     void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
@@ -272,6 +307,7 @@ public:
     {
         tick++;
         arp_current = arp_seq[int(tick/2) % 3]; // FIXME: what is this about?
+        updatePitch();
     }
 
     void doLine()
@@ -491,10 +527,12 @@ public:
         auto sampler = channel[column].sampler();
         using enum musfmt::CommandType;
         switch (cmd.type) {
-            case Note: {
+            case Note:
                 channel[column].note(cmd.note);
                 break;
-            }
+            case NoteLegato:
+                sampler->setNote(cmd.note, true);
+                break;
             case SleepLines:
                 sleep_lines[column] += cmd.param_xy;
                 break;
@@ -515,6 +553,15 @@ public:
                     (float)cmd.param.x/15.0f * sr / (samples_tick * (float)ticks_line),
                     (std::pow(2.0f, 2.0f/12.0f) - 1.0f) * (float)cmd.param.y/15.0f
                 );
+                break;
+            case FxGlide:
+                sampler->setGlide(cmd.param_xy / 16.0 / (float)ticks_line);
+                break;
+            case FxSlideUp:
+                sampler->setSlide(cmd.param_xy / 16.0, ticks_line);
+                break;
+            case FxSlideDown:
+                sampler->setSlide(cmd.param_xy / -16.0, ticks_line);
                 break;
             case FxTempo:
                 setBPM(cmd.param_xy);

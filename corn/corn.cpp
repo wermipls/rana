@@ -425,6 +425,16 @@ int parse_note(pugi::xml_node note_column)
     return note + 1 + octave * 12;
 }
 
+void make_legato(std::vector<musfmt::Command> &cell)
+{
+    using enum musfmt::CommandType;
+    for (auto &n : cell) {
+        if (n.type == Note) {
+            n.type = NoteLegato;
+        }
+    }
+}
+
 void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 {
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
@@ -495,6 +505,19 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.type = FxVibrato;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
                         cell.push_back(cmd);
+                    } else if (fxnum == "0G") {
+                        cmd.type = FxGlide;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        make_legato(cell);
+                        cell.push_back(cmd);
+                    } else if (fxnum == "0D") {
+                        cmd.type = FxSlideDown;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        cell.push_back(cmd);
+                    } else if (fxnum == "0U") {
+                        cmd.type = FxSlideUp;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        cell.push_back(cmd);
                     }
 
                     col_i++;
@@ -504,12 +527,23 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     rana::musfmt::Command cmd{};
                     auto fxnum = val(ec, "Number"); 
                     bool is_global = false;
+                    bool turn_legato = false;
 
                     if (fxnum == "0A") {
                         cmd.type = FxArp;
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "0V") {
                         cmd.type = FxVibrato;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0G") {
+                        cmd.type = FxGlide;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        turn_legato = true;
+                    } else if (fxnum == "0D") {
+                        cmd.type = FxSlideDown;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0U") {
+                        cmd.type = FxSlideUp;
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "ZT") {
                         is_global = true;
@@ -523,6 +557,9 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         parsed_lines[line_index][0].push_back(cmd);
                     } else {
                         for (int i = track_offsets[track_index]; i < track_offsets[track_index+1]; i++) {
+                            if (turn_legato) {
+                                make_legato(parsed_lines[line_index][i]);
+                            }
                             parsed_lines[line_index][i].push_back(cmd);
                         }
                     }
