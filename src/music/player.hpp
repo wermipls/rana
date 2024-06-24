@@ -465,6 +465,9 @@ public:
         if (sequence_pos > song.loop_end) {
             sequence_pos = song.loop_start;
         }
+        if (sequence_pos >= song.sequence.size()) {
+            sequence_pos = 0;
+        }
     }
 
     const musfmt::Pattern &currentPattern()
