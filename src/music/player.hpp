@@ -424,6 +424,14 @@ public:
         lines_left = currentPattern().lines;
         recalculateSamplesTick();
 
+        if (song.ins.size() < 1) {
+            throw std::invalid_argument("song must have at least one instrument");
+        }
+
+        if (song.ins[0].smp.size() < 1) {
+            throw std::invalid_argument("song must have at least one sample in the first instrument");
+        }
+
         for (auto &n : song.sampledata) {
             auto d = decode_flac(n.data);
             if (d == nullptr) {

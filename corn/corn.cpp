@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <regex>
 #include <cmath>
+#include <map>
 
 using namespace rana;
 
@@ -427,67 +428,73 @@ int parse_note(pugi::xml_node note_column)
 void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 {
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
+    std::vector<int> track_offsets;
+
+    track_offsets.push_back(0);
+    int columns_total = 0;
+    for (auto &t : song.mixer.tracks) {
+        columns_total += t.columns;
+        track_offsets.push_back(columns_total);
+    }
+
     for (auto &pattern : patterns) {
         musfmt::Pattern p{};
+        p.ch.resize(columns_total);
         p.lines = val_int_req(pattern, "NumberOfLines");
-        int track_i = 0;
 
+        std::map<int, std::vector<std::vector<musfmt::Command>>> parsed_lines;
+
+        int track_index = 0;
         for (auto &track : pattern.child("Tracks").children("PatternTrack")) {
-            std::vector<musfmt::PatternChannel> ch(song.mixer.tracks[track_i].columns);
-            int prev_index[12] = {0};
             for (auto &line : track.child("Lines").children("Line")) {
                 using enum rana::musfmt::CommandType;
 
                 auto line_index = line.attribute("index").as_int(0);
-                int col_i = 0;
+                int col_i = track_offsets[track_index];
+                int col_limit = track_offsets[track_index+1];
+
+                parsed_lines[line_index].resize(columns_total);
+
                 for (auto &nc : line.child("NoteColumns").children("NoteColumn")) {
-                    if (ch.size() <= col_i) {
-                        log::warn("discarding notes from track %d after column %d", track_i, ch.size());
+                    if (col_i >= col_limit) {
+                        log::warn("discarding notes from track %d after column %d", track_index, col_limit);
                         break;
                     }
 
-                    rana::musfmt::Command cmd{};
+                    auto &cell = parsed_lines[line_index][col_i];
 
-                    if (auto delta = line_index - prev_index[col_i]; delta != 0) {
-                        if (delta < 0) {
-                            log::err("lines are not sequential, aborting...");
-                            abort();
-                        }
-
-                        cmd.type = SleepLines;
-                        cmd.param_xy = delta;
-                        ch[col_i].rows.push_back(cmd);
-                        prev_index[col_i] = line_index;
-                    }
-
+                    musfmt::Command cmd;
                     if (auto note = parse_note(nc); note >= 0) {
                         cmd.type = Note;
                         cmd.note = note;
-                        ch[col_i].rows.push_back(cmd);
+                        cell.push_back(cmd);
                     }
 
                     if (!nc.child("Instrument").empty()) {
                         cmd.type = Instrument;
                         cmd.param_xy = val_hex(nc, "Instrument", 0);
-                        ch[col_i].rows.push_back(cmd);
+                        cell.push_back(cmd);
                     }
 
                     if (!nc.child("Volume").empty()) {
-                        cmd.type = Volume;
-                        cmd.param_xy = val_hex(nc, "Volume", 128);
-                        ch[col_i].rows.push_back(cmd);
+                        if (auto v = val(nc, "Volume"); v[0] >= '0' || v[0] <= '9') {
+                            cmd.type = Volume;
+                            cmd.param_xy = val_hex(nc, "Volume", 128);
+                            cell.push_back(cmd);
+                        }
                     }
 
-                    if (val(nc, "EffectNumber") == "0A") {
+                    // effects
+                    auto fxnum = val(nc, "EffectNumber");
+
+                    if (fxnum == "0A") {
                         cmd.type = FxArp;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
-                        ch[col_i].rows.push_back(cmd);
-                    }
-
-                    if (val(nc, "EffectNumber") == "0V") {
+                        cell.push_back(cmd);
+                    } else if (fxnum == "0V") {
                         cmd.type = FxVibrato;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
-                        ch[col_i].rows.push_back(cmd);
+                        cell.push_back(cmd);
                     }
 
                     col_i++;
@@ -495,54 +502,59 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 
                 for (auto &ec : line.child("EffectColumns").children("EffectColumn")) {
                     rana::musfmt::Command cmd{};
+                    auto fxnum = val(ec, "Number"); 
+                    bool is_global = false;
 
-                    if (val(ec, "Number") == "0A") {
+                    if (fxnum == "0A") {
                         cmd.type = FxArp;
                         cmd.param_xy = val_hex(ec, "Value", 0);
-                    } else if (val(ec, "Number") == "0V") {
+                    } else if (fxnum == "0V") {
                         cmd.type = FxVibrato;
                         cmd.param_xy = val_hex(ec, "Value", 0);
-                    } else if (val(ec, "Number") == "ZT") {
-                        if (auto delta = line_index - prev_index[0]; delta != 0) {
-                            if (delta < 0) {
-                                log::err("lines are not sequential, aborting...");
-                                abort();
-                            }
-
-                            cmd.type = SleepLines;
-                            cmd.param_xy = delta;
-                            ch[0].rows.push_back(cmd);
-                            prev_index[0] = line_index;
-                        }
+                    } else if (fxnum == "ZT") {
+                        is_global = true;
                         cmd.type = FxTempo;
                         cmd.param_xy = val_hex(ec, "Value", 0);
-                        ch[0].rows.push_back(cmd);
-                        prev_index[0] = line_index;
-                        continue;
                     } else {
                         continue;
                     }
 
-                    for (int i = 0; i < ch.size(); i++) {
-                        if (auto delta = line_index - prev_index[i]; delta != 0) {
-                            if (delta < 0) {
-                                log::err("lines are not sequential, aborting...");
-                                abort();
-                            }
-
-                            cmd.type = SleepLines;
-                            cmd.param_xy = delta;
-                            ch[i].rows.push_back(cmd);
-                            prev_index[i] = line_index;
+                    if (is_global) {
+                        parsed_lines[line_index][0].push_back(cmd);
+                    } else {
+                        for (int i = track_offsets[track_index]; i < track_offsets[track_index+1]; i++) {
+                            parsed_lines[line_index][i].push_back(cmd);
                         }
-                        ch[i].rows.push_back(cmd);
-                        prev_index[col_i] = line_index;
                     }
                 }
-
             }
-            track_i++;
-            p.ch.insert(p.ch.end(), ch.begin(), ch.end());
+            track_index++;
+        }
+
+        // turn this mush into proper engine representation
+        for (int col = 0; col < columns_total; col++) {
+            int last_line = 0;
+            for (int line = 0; line < p.lines; line++) {
+                if (parsed_lines[line].size() == 0) {
+                    continue;
+                }
+                auto &rows = p.ch[col].rows;
+                auto &cell = parsed_lines[line][col];
+                if (cell.size() == 0) continue;
+
+                using enum rana::musfmt::CommandType;
+                if (line > last_line) {
+                    rows.push_back(musfmt::Command{
+                        .type = SleepLines,
+                        .param_xy = static_cast<uint8_t>(line - last_line)
+                    });
+                    last_line = line;
+                }
+
+                for (auto n : cell) {
+                    rows.push_back(n);
+                }
+            }
         }
         song.patterns.push_back(p);
     }
@@ -561,7 +573,7 @@ void parse_sequence(pugi::xml_node &rnsong, musfmt::Song &song)
     int end   = val_int(loop, "RangePos",  -1);
     if (start < 0 || end < 0) { // no loop region
         song.loop_start = 0;
-        song.loop_end = song.patterns.size() - 1;
+        song.loop_end = song.patterns.size();
     } else {
         song.loop_start = start;
         song.loop_end = end;
