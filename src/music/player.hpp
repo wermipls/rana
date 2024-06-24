@@ -66,8 +66,8 @@ class MusicSampler {
     float vibrato_intensity = 0;
     float vibrato_current = 0;
 
-    float tick = 0;
-    float line = 0;
+    int tick = 0;
+    int line = 0;
     float arp_seq[3] = {1, 1, 1};
     float arp_current = 1;
 
@@ -268,15 +268,15 @@ public:
         return buf;
     }
 
-    void doTicks(float ticks)
+    void doTick()
     {
-        tick += ticks;
+        tick++;
         arp_current = arp_seq[int(tick/2) % 3]; // FIXME: what is this about?
     }
 
-    void doLines(float lines)
+    void doLine()
     {
-        line += lines;
+        line++;
         if (line >= 1) {
             line = 0;
             resetEffects();
@@ -396,11 +396,13 @@ class MusicPlayer {
     int ticks_line;
     int lines_beat;
 
-    float lines_left = 0;
+    int lines_left = 0;
+    int ticks_left = 0;
+    float error_samples = 0;
 
     size_t ch_count = 0;
     std::vector<int> cmd_i;
-    std::vector<float> sleep_lines;
+    std::vector<int> sleep_lines;
     std::vector<Channel> channel;
     std::vector<std::shared_ptr<DecodedSample>> decoded_sample;
 
@@ -422,6 +424,7 @@ public:
         ticks_line = song.line_ticks;
         lines_beat = song.beat_lines;
         lines_left = currentPattern().lines;
+        ticks_left = ticks_line;
         recalculateSamplesTick();
 
         if (song.ins.size() < 1) {
@@ -519,7 +522,7 @@ public:
         }
     }
 
-    void doSequence(size_t samples)
+    void doSequenceTick()
     {
         if (lines_left <= 0) {
             nextPattern();
@@ -544,17 +547,25 @@ public:
                     break;
                 }
             }
-            channel[i].sampler()->doTicks(samples / samples_tick);
-            sleep_lines[i] -= samples / samples_tick / (float)ticks_line;
-            channel[i].sampler()->doLines(samples / samples_tick / (float)ticks_line);
+            channel[i].sampler()->doTick();
+            if (ticks_left <= 0) {
+                sleep_lines[i] -= 1;
+                channel[i].sampler()->doLine();
+            }
         }
 
-        lines_left -= samples / samples_tick / (float)ticks_line;
+        if (ticks_left <= 0) {
+            lines_left--;
+            ticks_left = ticks_line;
+        }
+        ticks_left--;
     }
 
     std::vector<SampleStereo> getSamples(size_t n_samples)
     {
-        doSequence(n_samples);
+        n_samples = samples_tick + error_samples;
+        error_samples += samples_tick - n_samples;
+        doSequenceTick();
 
         std::vector<SampleStereo> samples(n_samples);
 

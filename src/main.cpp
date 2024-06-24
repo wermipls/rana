@@ -1,6 +1,6 @@
 #include <SDL2/SDL.h>
 #include "gfx.hpp"
-#include "audio/audio.hpp"
+#include "audio/backend.hpp"
 #include "music/player.hpp"
 #include "serializer.hpp"
 #include "log.hpp"
