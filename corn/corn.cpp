@@ -435,6 +435,33 @@ void make_legato(std::vector<musfmt::Command> &cell)
     }
 }
 
+void optimize_pattern(musfmt::Pattern &pattern)
+{
+    size_t bytes_saved = 0;
+
+    for (auto &ch : pattern.ch) {
+        int last_instrument = -1;
+        for (auto it = ch.rows.begin(); it != ch.rows.end(); ) {
+            if (it->type != musfmt::CommandType::Instrument) {
+                it++;
+                continue;
+            }
+
+            if (last_instrument == it->param_xy) {
+                it = ch.rows.erase(it);
+                bytes_saved += sizeof(musfmt::Command);
+            } else {
+                last_instrument = it->param_xy;
+                it++;
+            }
+        }
+    }
+
+    if (bytes_saved) {
+        log::info("saved %d bytes optimizing pattern", bytes_saved);
+    }
+}
+
 void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 {
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
@@ -593,6 +620,8 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                 }
             }
         }
+
+        optimize_pattern(p);
         song.patterns.push_back(p);
     }
 }
