@@ -520,7 +520,11 @@ public:
         }
         for (size_t i = 0; i < ch_count; i++) {
             while (sleep_lines[i] <= 0) {
-                auto &rows = currentPattern().ch[i].rows;
+                auto &pat = currentPattern();
+                if (i >= pat.ch.size()) {
+                    break;
+                }
+                auto &rows = pat.ch[i].rows;
                 if (cmd_i[i] < rows.size()) {
                     auto cmd = rows[cmd_i[i]];
                     doCommand(i, cmd);
