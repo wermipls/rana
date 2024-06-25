@@ -152,6 +152,9 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
             auto name = match[3].str();
             auto ext = match[4].str();
 
+            if (smp_i >= song.ins[ins_i].smp.size()) {
+                continue;
+            }
             log::info("instrument %d, sample %d: '%s.%s'", ins_i, smp_i, name.c_str(), ext.c_str());
             if (EncodingHint hint; encoding_hint(name, hint)) {
                 log::info("    encoding hint: %s %d", hint.codec.c_str(), hint.quality);
@@ -256,12 +259,18 @@ void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
 
         struct musfmt::Instrument instrument = {};
 
+        int sample_count = 0;
         for (auto smp : ins.child("SampleGenerator").child("Samples").children("Sample")) {
+            if (sample_count >= 1) {
+                log::warn("instruments support a maximum of 1 sample, ignoring");
+                break;
+            }
             musfmt::Sample sample = parse_sample(smp);
 
             log::info("  sample: '%s'", val(smp, "Name").c_str());
 
             instrument.smp.push_back(sample);
+            sample_count++;
         }
 
         bool has_volume_adsr = false;
