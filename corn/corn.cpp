@@ -147,8 +147,8 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
         std::smatch match;
 
         if (std::regex_match(fname, match, re)) {
-            auto ins_i = std::stoi(match[1].str());
-            auto smp_i = std::stoi(match[2].str());
+            auto ins_i = std::stoul(match[1].str());
+            auto smp_i = std::stoul(match[2].str());
             auto name = match[3].str();
             auto ext = match[4].str();
 
@@ -443,8 +443,6 @@ void make_legato(std::vector<musfmt::Command> &cell)
 
 void optimize_pattern(musfmt::Pattern &pattern)
 {
-    size_t bytes_saved = 0;
-
     for (auto &ch : pattern.ch) {
         int last_instrument = -1;
         for (auto it = ch.rows.begin(); it != ch.rows.end(); ) {
@@ -455,7 +453,6 @@ void optimize_pattern(musfmt::Pattern &pattern)
 
             if (last_instrument == it->param_xy) {
                 it = ch.rows.erase(it);
-                bytes_saved += sizeof(musfmt::Command);
             } else {
                 last_instrument = it->param_xy;
                 it++;

@@ -334,7 +334,6 @@ class Compressor : public Effect {
     static constexpr float PeakSmoothingHz = 20.0f;
     float sr;
     float pp_coeff;
-    float min = 0;
     float max = 0;
     float pp = 0;
     float attack_coeff;
@@ -433,7 +432,7 @@ class Galactic : public Effect {
 
     float aML[3111];
     float aMR[3111];
-    float vibML, vibMR, depthM, oldfpd;
+    float oldfpd;
 
     float feedbackAL;
     float feedbackBL;

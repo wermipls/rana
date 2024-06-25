@@ -1,13 +1,16 @@
 #pragma once
 
 #include "music/format.hpp"
-#include "audio/audio.hpp"
+#include "audio/effects.hpp"
 #include "audio/samples.hpp"
 #include <cmath>
 #include <memory>
 
 namespace rana {
 namespace audio {
+
+constexpr Hz RnsVolumeSmoothing = 27.5;
+constexpr Hz RnsDeclickSmoothing = 110;
 
 double from_dB(double a)
 {
@@ -55,7 +58,7 @@ class MusicSampler {
     float time_since_trigger = 0; // in seconds; used for resolving adsr etc.
 
     PlaybackSample sample{};
-    int sample_pos = 0;
+    uint32_t sample_pos = 0;
     float t = 0;
     SampleStereo prev{};
 
@@ -461,12 +464,12 @@ class MusicPlayer {
     float error_samples = 0;
 
     size_t ch_count = 0;
-    std::vector<int> cmd_i;
+    std::vector<uint16_t> cmd_i;
     std::vector<int> sleep_lines;
     std::vector<Channel> channel;
     std::vector<std::shared_ptr<DecodedSample>> decoded_sample;
 
-    int sequence_pos = 0;
+    uint16_t sequence_pos = 0;
 
     std::vector<uint8_t> ch_to_track;
     std::vector<Track> tracks;
@@ -512,15 +515,14 @@ public:
         sleep_lines.resize(ch_count);
         channel.resize(ch_count);
         for (auto &n : channel) {
-            auto sampler = n.sampler();
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
         }
 
-        for (int i = 0; i < song.mixer.tracks.size(); i++) {
+        for (size_t i = 0; i < song.mixer.tracks.size(); i++) {
             auto &track = song.mixer.tracks[i];
             tracks.push_back(Track(track.fx, sr));
-            for (int j = 0; j < track.columns; j++) {
+            for (size_t j = 0; j < track.columns; j++) {
                 ch_to_track.push_back(i);
             } 
         }

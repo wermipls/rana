@@ -201,13 +201,15 @@ enum class CommandType : uint8_t {
     NoteLegato,
 };
 
+struct CommandParam {
+    uint8_t y : 4;
+    uint8_t x : 4;
+};
+
 struct Command {
     CommandType type;
     union {
-        struct {
-            uint8_t y : 4;
-            uint8_t x : 4;
-        } param;
+        CommandParam param;
         uint8_t param_xy;
         uint8_t note;
     };
