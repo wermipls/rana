@@ -51,6 +51,7 @@ Supported effects:
 - `Axy` - Arpeggio
 - `Ixx`, `Oxx` - Volume fade in/out
 - `Sxx` - Sample offset
+- `Bxx` - Play sample backwards
 
 Limitations:
 - Effects can't be placed on master/send columns

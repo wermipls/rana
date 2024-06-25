@@ -59,6 +59,7 @@ class MusicSampler {
 
     PlaybackSample sample{};
     uint32_t sample_pos = 0;
+    bool reverse = false;
     float t = 0;
     SampleStereo prev{};
 
@@ -86,6 +87,7 @@ class MusicSampler {
         time_since_trigger = 0;
 
         sample_pos = 0;
+        reverse = false;
         t = 0;
         prev = {0,0};
 
@@ -124,17 +126,32 @@ class MusicSampler {
     void sampleNext()
     {
         using enum musfmt::LoopMode;
-        switch (sample.loop_mode) {
-            case Off:
-            case OneShot:
-                if (sample_pos < sample.s->data.size()) sample_pos++;
-                break;
-            case Forward:
-                sample_pos++;
-                if (sample_pos == sample.loop_end) {
-                    sample_pos = sample.loop_start;
-                }
-                break;
+        if (!reverse) {
+            switch (sample.loop_mode) {
+                case Off:
+                case OneShot:
+                    if (sample_pos < sample.s->data.size()) sample_pos++;
+                    break;
+                case Forward:
+                    sample_pos++;
+                    if (sample_pos == sample.loop_end) {
+                        sample_pos = sample.loop_start;
+                    }
+                    break;
+            }
+        } else {
+            switch (sample.loop_mode) {
+                case Off:
+                case OneShot:
+                    if (sample_pos != UINT32_MAX) sample_pos--;
+                    break;
+                case Forward:
+                    sample_pos--;
+                    if (sample_pos == sample.loop_start) {
+                        reverse = false;
+                    }
+                    break;
+            }
         }
     }
 
@@ -252,9 +269,18 @@ public:
     void setOffset(float offset)
     {
         sample_pos = sample.s->data.size() * offset;
+        if (reverse) {
+            sample_pos = sample.s->data.size() - sample_pos - 1;
+        }
         volume_actual = 0;
         // FIXME: declick using the same volume as volume commands...
         volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
+    }
+
+    void setReverse()
+    {
+        sample_pos = sample.s->data.size() - sample_pos - 1;
+        reverse = true;
     }
 
     void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
@@ -597,6 +623,9 @@ public:
                 break;
             case FxOffset:
                 sampler->setOffset(cmd.param_xy / 256.0f);
+                break;
+            case FxReverse:
+                sampler->setReverse();
                 break;
             case FxTempo:
                 setBPM(cmd.param_xy);

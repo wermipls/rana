@@ -556,6 +556,12 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.type = FxOffset;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
                         cell.push_back(cmd);
+                    } else if (fxnum == "0B") {
+                        cmd.type = FxReverse;
+                        cmd.param_xy = 0;
+                        if (val_hex(nc, "EffectValue", 0) == 0) {
+                            cell.push_back(cmd);
+                        }
                     }
 
                     col_i++;
@@ -592,6 +598,10 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     } else if (fxnum == "0S") {
                         cmd.type = FxOffset;
                         cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0B") {
+                        cmd.type = FxReverse;
+                        cmd.param_xy = 0;
+                        if (val_hex(ec, "Value", 0) != 0) continue;
                     } else if (fxnum == "ZT") {
                         is_global = true;
                         cmd.type = FxTempo;
