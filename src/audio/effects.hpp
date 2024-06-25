@@ -22,6 +22,15 @@ class Filter1Pole : public Effect {
     bool highpass;
     SampleStereo q{};
 
+    inline float normalized2coeff(float value)
+    {
+        // we want the filter value to reach 1 on the extreme edge
+        // so you can set it so it doesn't affect the sound when doing LP,
+        // rather than be truly accurate to -3dB frequency
+        float coeff = factor_1pole(pow(value, 2) * 19980 + 20, sr);
+        return min(coeff + pow(value, 30.0f), 1.0f);
+    }
+
 public:
     Filter1Pole(Hz sample_rate = 44100, bool is_highpass = false)
     {
@@ -38,7 +47,7 @@ public:
     virtual void setParam(int index, float value)
     {
         switch (index) {
-            case 0: setCutoff(pow(value, 2) * 19980 + 20); break;
+            case 0: coeff = normalized2coeff(value); break;
         }
     }
 
