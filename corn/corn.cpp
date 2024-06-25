@@ -3,7 +3,7 @@
 #include "music/format.hpp"
 #include "fio.hpp"
 #include "miniz/miniz.h"
-#include <pugixml.hpp>
+#include "pugixml/pugixml.hpp"
 #include <cstdlib>
 #include <regex>
 #include <cmath>

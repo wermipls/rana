@@ -9,14 +9,13 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(pugixml)
-
 set(BUILD_SHARED_LIBS OFF)
 
 # Your application target.
-add_executable(corn WIN32
+add_executable(corn
     corn.cpp
     miniz/miniz.c
+    pugixml/pugixml.cpp
 )
 
 target_include_directories(corn PRIVATE ../src)
@@ -33,6 +32,3 @@ if(MSVC)
 else()
   target_compile_options(corn PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-
-target_link_libraries(corn pugixml::pugixml)
-
