@@ -49,6 +49,7 @@ Supported effects:
 - `Uxx`, `Dxx` - Pitch slide up/down
 - `ZTxx` - Tempo
 - `Axy` - Arpeggio
+- `Ixx`, `Oxx` - Volume fade in/out
 
 Limitations:
 - Effects can't be placed on master/send columns

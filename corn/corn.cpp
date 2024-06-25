@@ -545,6 +545,14 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.type = FxSlideUp;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
                         cell.push_back(cmd);
+                    } else if (fxnum == "0O") {
+                        cmd.type = FxFadeout;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        cell.push_back(cmd);
+                    } else if (fxnum == "0I") {
+                        cmd.type = FxFadein;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        cell.push_back(cmd);
                     }
 
                     col_i++;
@@ -571,6 +579,12 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "0U") {
                         cmd.type = FxSlideUp;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0O") {
+                        cmd.type = FxFadeout;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0I") {
+                        cmd.type = FxFadein;
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "ZT") {
                         is_global = true;

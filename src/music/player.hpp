@@ -72,6 +72,8 @@ class MusicSampler {
     float arp_seq[3] = {1, 1, 1};
     float arp_current = 1;
 
+    float volume_increment = 0;
+
     void resetState()
     {
         volume_actual = 1;
@@ -95,11 +97,18 @@ class MusicSampler {
         tick = 0;
 
         pitch_tick_increment = 0;
+        volume_increment = 0;
     }
 
     void updateVolume()
     {
         volume_actual += (volume_target - volume_actual) * volume_coeff;
+    }
+
+    void updateVolumeFade()
+    {
+        volume_target += volume_increment;
+        volume_target = min(max(volume_target, 0.0f), 1.0f);
     }
 
     void updateVibrato(float deltatime)
@@ -131,6 +140,7 @@ class MusicSampler {
         setArpeggio(0,0);
         setVibrato(0,0);
         pitch_tick_increment = 0;
+        volume_increment = 0;
     }
 
     void updateADSR()
@@ -231,6 +241,11 @@ public:
         pitch_tick_increment = intervalFromSemi(abs(semi / ticks));
     }
 
+    void setFade(float increment)
+    {
+        volume_increment = increment;
+    }
+
     void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
     {
         sample.s = smp;
@@ -308,6 +323,7 @@ public:
         tick++;
         arp_current = arp_seq[int(tick/2) % 3]; // FIXME: what is this about?
         updatePitch();
+        updateVolumeFade();
     }
 
     void doLine()
@@ -562,6 +578,12 @@ public:
                 break;
             case FxSlideDown:
                 sampler->setSlide(cmd.param_xy / -16.0, ticks_line);
+                break;
+            case FxFadein:
+                sampler->setFade(cmd.param_xy / 128.0f / (float)ticks_line);
+                break;
+            case FxFadeout:
+                sampler->setFade(cmd.param_xy / -256.0f / (float)ticks_line);
                 break;
             case FxTempo:
                 setBPM(cmd.param_xy);
