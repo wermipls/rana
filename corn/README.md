@@ -50,6 +50,7 @@ Supported effects:
 - `ZTxx` - Tempo
 - `Axy` - Arpeggio
 - `Ixx`, `Oxx` - Volume fade in/out
+- `Sxx` - Sample offset
 
 Limitations:
 - Effects can't be placed on master/send columns
