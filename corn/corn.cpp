@@ -18,46 +18,53 @@ double dB(double volume)
     return 20 * std::log10(volume);
 }
 
+const char *empty_string(const char *s)
+{
+    return *s ? s : "empty string"; 
+}
+
 double val_double(pugi::xml_node node, const char *name, double fallback)
 {
+    auto cv = node.child_value(name);
     try {
-        return std::stod(node.child_value(name));
+        return std::stod(cv);
     }
     catch (const std::invalid_argument &e) {
-        log::warn("could not parse %s, using fallback value %f", name, fallback);
         return fallback;
     }
 }
 
 int val_int(pugi::xml_node node, const char *name, int fallback)
 {
+    auto cv = node.child_value(name);
     try {
-        return std::stoi(node.child_value(name));
+        return std::stoi(cv);
     }
     catch (const std::invalid_argument &e) {
-        log::warn("could not parse %s, using fallback value %d", name, fallback);
         return fallback;
     }
 }
 
 int val_hex(pugi::xml_node node, const char *name, int fallback)
 {
+    auto cv = node.child_value(name);
     try {
-        return std::stoi(node.child_value(name), 0, 16);
+        return std::stoi(cv, 0, 16);
     }
     catch (const std::invalid_argument &e) {
-        log::warn("could not parse %s, using fallback value %d", name, fallback);
         return fallback;
     }
 }
 
 int val_int_req(pugi::xml_node node, const char *name)
 {
+    auto cv = node.child_value(name);
     try {
-        return std::stoi(node.child_value(name));
+        return std::stoi(cv);
     }
     catch (const std::exception &e) {
-        log::err("could not parse %s, aborting...", name);
+        log::err("could not parse %s of %s (got %s), aborting...",
+                 name, node.name(), empty_string(cv));
         abort();
     }
 }
@@ -253,10 +260,6 @@ void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
             musfmt::Sample sample = parse_sample(smp);
 
             log::info("  sample: '%s'", val(smp, "Name").c_str());
-            log::info("    volume: %.2f dB", dB(sample.volume));
-            log::info("    pan: %.2f", sample.pan);
-            log::info("    transpose: %d", sample.transpose);
-            log::info("    fine: %d", sample.fine);
 
             instrument.smp.push_back(sample);
         }
@@ -283,9 +286,6 @@ void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
             adsr.decay    = adsr_length_to_seconds(val_double(n.child("Decay"),   "Value", 0.0));
             adsr.sustain  = val_double(n.child("Sustain"), "Value", 1.0);
             adsr.release  = adsr_length_to_seconds(val_double(n.child("Release"), "Value", 0.0));
-
-            log::info("    attack: %.3f, hold: %.3f, decay: %.3f, sustain: %.3f, release: %.3f",
-                adsr.attack, adsr.hold, adsr.decay, adsr.sustain, adsr.release);
         }
 
         song.ins.push_back(instrument);
@@ -375,10 +375,7 @@ musfmt::Mixer parse_mixer(pugi::xml_node &rnsong)
     for (auto &track : tracks) {
         auto t = parse_track(track);
         mixer.tracks.push_back(t);
-
-        log::info("track %d: '%s'", mixer.tracks.size(), t.name.c_str());
-        log::info("  volume: %.2f dB", dB(t.volume));
-        log::info("  pan: %f",       t.pan);
+        log::info("parsed mixer track %d", mixer.tracks.size(), t.name.c_str());
     }
 
     auto master = rnsong.child("Tracks").child("SequencerMasterTrack");
@@ -455,10 +452,6 @@ void optimize_pattern(musfmt::Pattern &pattern)
                 it++;
             }
         }
-    }
-
-    if (bytes_saved) {
-        log::info("saved %d bytes optimizing pattern", bytes_saved);
     }
 }
 
