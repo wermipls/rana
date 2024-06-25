@@ -553,6 +553,10 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.type = FxFadein;
                         cmd.param_xy = val_hex(nc, "EffectValue", 0);
                         cell.push_back(cmd);
+                    } else if (fxnum == "0S") {
+                        cmd.type = FxOffset;
+                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        cell.push_back(cmd);
                     }
 
                     col_i++;
@@ -585,6 +589,9 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "0I") {
                         cmd.type = FxFadein;
+                        cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (fxnum == "0S") {
+                        cmd.type = FxOffset;
                         cmd.param_xy = val_hex(ec, "Value", 0);
                     } else if (fxnum == "ZT") {
                         is_global = true;
@@ -622,10 +629,15 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 
                 using enum rana::musfmt::CommandType;
                 if (line > last_line) {
-                    rows.push_back(musfmt::Command{
-                        .type = SleepLines,
-                        .param_xy = static_cast<uint8_t>(line - last_line)
-                    });
+                    int sleep = line - last_line;
+                    while (sleep > 0) {
+                        uint8_t sleep_clamped = std::min(sleep, UINT8_MAX);
+                        sleep -= sleep_clamped;
+                        rows.push_back(musfmt::Command{
+                            .type = SleepLines,
+                            .param_xy = sleep_clamped
+                        });
+                    }
                     last_line = line;
                 }
 

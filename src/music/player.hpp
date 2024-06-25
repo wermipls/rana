@@ -246,6 +246,14 @@ public:
         volume_increment = increment;
     }
 
+    void setOffset(float offset)
+    {
+        sample_pos = sample.s->data.size() * offset;
+        volume_actual = 0;
+        // FIXME: declick using the same volume as volume commands...
+        volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
+    }
+
     void setInstrument(const musfmt::Instrument &ins, DecodedSample *smp)
     {
         sample.s = smp;
@@ -584,6 +592,9 @@ public:
                 break;
             case FxFadeout:
                 sampler->setFade(cmd.param_xy / -256.0f / (float)ticks_line);
+                break;
+            case FxOffset:
+                sampler->setOffset(cmd.param_xy / 256.0f);
                 break;
             case FxTempo:
                 setBPM(cmd.param_xy);
