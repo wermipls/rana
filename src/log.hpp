@@ -15,14 +15,14 @@ void info(const char *fmt, T&&... args)
 template <typename... T>
 void warn(const char *fmt, T&&... args)
 {
-    std::fputs("warn: ", stderr);
+    std::fputs("\033[35mwarn: \033[0m", stderr);
     info(fmt, std::forward<T>(args)...);
 }
 
 template <typename... T>
 void err(const char *fmt, T&&... args)
 {
-    std::fputs("err: ", stderr);
+    std::fputs("\033[31merr: \033[0m", stderr);
     info(fmt, std::forward<T>(args)...);
 }
 
