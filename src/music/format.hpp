@@ -33,11 +33,21 @@ typedef int32_t SampleDataID;
 
 struct SampleData : public Serializable {
     Codec codec;
+    // those fields are only relevant for opus
+    float sr = 48000;
+    uint32_t length = 0;
+    uint16_t start_offset = 0;
+
     std::vector<uint8_t> data;
 
     virtual void serialize(Serializer &s)
     {
         s.int8((uint8_t *)&codec);
+        if (codec == Codec::Opus) {
+            s.float32(&sr);
+            s.int32(&length);
+            s.int16(&start_offset);
+        }
         s.vector(data);
     }
 };

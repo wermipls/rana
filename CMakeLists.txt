@@ -16,6 +16,10 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 
+if (NOT TARGET opus)
+    add_subdirectory(../opus opus)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUA REQUIRED luajit)
 
@@ -57,3 +61,5 @@ target_link_libraries(rana ${LUA_LIBRARIES})
 target_include_directories(rana PUBLIC ${LUA_INCLUDE_DIRS})
 target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
 
+
+target_link_libraries(rana opus)

@@ -525,7 +525,17 @@ public:
         }
 
         for (auto &n : song.sampledata) {
-            auto d = decode_flac(n.data);
+            std::shared_ptr<DecodedSample> d;
+            switch (n.codec) {
+                case musfmt::Codec::FLAC: d = decode_flac(n.data); break;
+                case musfmt::Codec::Opus:
+                    d = decode_opus(n.data);
+                    d->rate = n.sr;
+                    d->data.erase(d->data.begin(), d->data.begin() + n.start_offset);
+                    d->data.resize(n.length);
+                    break;
+            }
+
             if (d == nullptr) {
                 log::err("failed to decode sample...");
                 abort();

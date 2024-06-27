@@ -11,6 +11,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(BUILD_SHARED_LIBS OFF)
 
+if (NOT TARGET opus)
+    add_subdirectory(../opus opus)
+endif()
+
 # Your application target.
 add_executable(corn
     corn.cpp
@@ -19,6 +23,7 @@ add_executable(corn
 )
 
 target_include_directories(corn PRIVATE ../src)
+target_include_directories(corn PRIVATE ../external)
 target_link_libraries(corn -static -fdiagnostics-color=always)
 target_compile_options(corn PRIVATE -ggdb -fdiagnostics-color=always)
 
@@ -32,3 +37,5 @@ if(MSVC)
 else()
   target_compile_options(corn PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+target_link_libraries(corn opus)

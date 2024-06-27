@@ -9,6 +9,7 @@
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
 #include "log.hpp"
+#include <opus/opus.h>
 
 namespace rana {
 namespace audio {
@@ -51,6 +52,52 @@ std::shared_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
 
     return decoded;
 };
+
+std::shared_ptr<DecodedSample> decode_opus(std::vector<uint8_t> s)
+{
+    int error;
+    auto st = opus_decoder_create(48000, 2, &error);
+    if (error != OPUS_OK) {
+        log::err("failed to create opus decoder");
+        return nullptr;
+    }
+
+    auto decoded = std::make_shared<DecodedSample>();
+    auto &samples = decoded->data;
+    decoded->rate = 48000;
+
+    size_t samples_pos = 0;
+    for (size_t i = 0; i < s.size(); ) {
+        samples.resize(samples.size() + 960*6);
+        int payload_bytes = s[i] << 8 | s[i+1];
+        i += 2;
+        if (!payload_bytes) {
+            continue;
+        }
+
+        auto samples_decoded = opus_decode_float(
+            st, 
+            (uint8_t *)&s[i],
+            payload_bytes,
+            (float *)&samples[samples_pos],
+            (samples.size() - samples_pos) * 2 * sizeof(float),
+            0
+        );
+
+        if (!samples_decoded) {
+            log::err("failed to decode opus packet");
+            opus_decoder_destroy(st);
+            return nullptr;
+        }
+
+        samples_pos += samples_decoded;
+        i += payload_bytes;
+    }
+
+    opus_decoder_destroy(st);
+    samples.resize(samples_pos);
+    return decoded;
+}
 
 }
 }

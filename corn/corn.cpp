@@ -1,6 +1,7 @@
 #include "serializer.hpp"
 #include "log.hpp"
 #include "music/format.hpp"
+#include "audio/samples.hpp"
 #include "fio.hpp"
 #include "miniz/miniz.h"
 #include "pugixml/pugixml.hpp"
@@ -8,10 +9,12 @@
 #include <regex>
 #include <cmath>
 #include <map>
+#include <opus/opus.h>
 
 using namespace rana;
 
 static bool g_strip_names = false;
+static bool g_force_opus = false;
 
 double dB(double volume)
 {
@@ -127,6 +130,84 @@ bool encoding_hint(const std::string &sample_name, EncodingHint &hint)
     return false;
 }
 
+void encode_sample_opus(musfmt::SampleData &sd, int bitrate_bps)
+{
+    if (sd.codec == musfmt::Codec::Opus) {
+        log::err("reencoding from opus is not supported");
+        return;
+    }
+
+    auto df = drflac_open_memory(sd.data.data(), sd.data.size(), NULL);
+    auto frames = df->totalPCMFrameCount;
+    auto channels = df->channels;
+    auto sr = df->sampleRate;
+    auto buf = std::vector<float>(df->totalPCMFrameCount * df->channels);
+
+    auto f = drflac_read_pcm_frames_f32(df, buf.size(), buf.data());
+    drflac_close(df);
+
+    int err;
+    auto enc = opus_encoder_create(48000, channels, OPUS_APPLICATION_AUDIO, &err);
+    if (err != OPUS_OK) {
+        log::err("failed to create opus encoder");
+        return;
+    }
+
+    auto reencoded = musfmt::SampleData();
+    reencoded.codec = musfmt::Codec::Opus;
+    reencoded.sr = sr;
+    reencoded.length = frames;
+
+    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
+    opus_encoder_ctl(enc, OPUS_SET_BITRATE(bitrate_bps));
+    opus_encoder_ctl(enc, OPUS_SET_VBR(1));
+    opus_encoder_ctl(enc, OPUS_SET_LSB_DEPTH(df->bitsPerSample));
+    opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+
+    // very important!
+    int32_t lookahead;
+    opus_encoder_ctl(enc, OPUS_GET_LOOKAHEAD(&lookahead));
+    reencoded.start_offset = lookahead;
+
+    const int frame_size = 48000 / 50;
+    const int max_payload_size = 1024;
+
+    buf.resize(std::ceil(buf.size() / (float)frame_size) * frame_size);
+
+    auto &out = reencoded.data;
+    size_t out_pos = 0;
+
+    for (size_t i = 0; i < buf.size(); i += frame_size * channels) {
+        out.resize(out_pos + max_payload_size + 2);
+        auto payload_bytes = opus_encode_float(
+            enc, &buf[i], frame_size, &out[out_pos+2], max_payload_size);
+
+        if (payload_bytes < 0) {
+            log::err("error encoding opus packet");
+            opus_encoder_destroy(enc);
+            return;
+        }
+
+        out[out_pos+0]   = payload_bytes >> 8;
+        out[out_pos+1] = payload_bytes & 0xFF;
+        out_pos += payload_bytes + 2;
+    }
+
+    out.resize(out_pos);
+
+    float percent = (float)out.size() / (float)sd.data.size() * 100.0f;
+    log::info("reencoded sample to opus, went from %d to %d bytes (%.1f%% of original)",
+        sd.data.size(), out.size(), percent
+    );
+
+    if (percent >= 100) {
+        log::warn("reencoded bigger than original, discarding");
+        return;
+    } 
+
+    sd = reencoded;
+}
+
 void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
 {
     auto sample_data = std::vector<musfmt::SampleData>();
@@ -156,8 +237,12 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
                 continue;
             }
             log::info("instrument %d, sample %d: '%s.%s'", ins_i, smp_i, name.c_str(), ext.c_str());
+            int reencode_opus = g_force_opus ? 80 : 0;
             if (EncodingHint hint; encoding_hint(name, hint)) {
                 log::info("    encoding hint: %s %d", hint.codec.c_str(), hint.quality);
+                if (hint.codec == "opus") {
+                    reencode_opus = hint.quality;
+                }
             }
 
             musfmt::SampleData sd{};
@@ -178,6 +263,9 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
             }
 
             song.ins[ins_i].smp[smp_i].sampledata_id = sample_data.size();
+            if (reencode_opus) {
+                encode_sample_opus(sd, reencode_opus * 1000);
+            }
             sample_data.push_back(sd);
         }
     }
