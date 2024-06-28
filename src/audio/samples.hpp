@@ -9,7 +9,7 @@
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
 #include "log.hpp"
-#include <opus/opus.h>
+#include <opus.h>
 
 namespace rana {
 namespace audio {

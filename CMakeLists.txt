@@ -16,15 +16,14 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 
+set(BUILD_SHARED_LIBS OFF)
+
 if (NOT TARGET opus)
-    add_subdirectory(../opus opus)
+    add_subdirectory(opus opus)
 endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUA REQUIRED luajit)
-
-set(BUILD_SHARED_LIBS OFF)
-
 
 # Your application target.
 add_executable(rana WIN32

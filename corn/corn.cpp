@@ -9,7 +9,7 @@
 #include <regex>
 #include <cmath>
 #include <map>
-#include <opus/opus.h>
+#include <opus.h>
 
 using namespace rana;
 
