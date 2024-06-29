@@ -1,14 +1,14 @@
 #pragma once
 
-#include <string>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_render.h>
 
 namespace rana {
 namespace gfx {
 
 class Context {
 public:
-    Context(std::string title = "rana", int w = 1280, int h = 720);
+    Context(const char *title = "rana", int w = 1280, int h = 720);
     ~Context();
 
 private:

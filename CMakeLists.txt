@@ -28,6 +28,7 @@ pkg_check_modules(LUA REQUIRED luajit)
 add_executable(rana WIN32
     src/main.cpp
     src/gfx.cpp
+    src/sdl_error.cpp
     src/audio/freeverb/freeverb.c
 )
 
@@ -47,12 +48,7 @@ else()
   target_compile_options(rana PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# SDL2::SDL2main may or may not be available. It is e.g. required by Windows GUI applications
-if(TARGET SDL2::SDL2main)
-    # It has an implicit dependency on SDL2 functions, so it MUST be added before SDL2::SDL2 (or SDL2::SDL2-static)
-    target_link_libraries(rana SDL2::SDL2main)
-endif()
-target_link_libraries(rana SDL2::SDL2-static)
+target_link_libraries(rana SDL3::SDL3)
 
 
 target_link_libraries(rana ${LUA_LIBRARIES})

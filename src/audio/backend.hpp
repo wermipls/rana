@@ -1,42 +1,34 @@
 #pragma once
 
 #include <vector>
-#include <cmath>
-#include <cstring>
-#include <SDL2/SDL.h>
-#include "log.hpp"
+#include <SDL3/SDL_audio.h>
 #include "common.hpp"
+#include "sdl_error.hpp"
+#include "log.hpp"
 
 namespace rana {
 namespace audio {
 
-static SDL_AudioDeviceID device;
-static SDL_AudioSpec device_spec;
+static SDL_AudioStream *stream;
 
 void init(int sample_rate)
 {
     SDL_Init(SDL_INIT_AUDIO);
 
-    SDL_AudioSpec desired{};
-    desired.channels = 2;
-    desired.format = AUDIO_F32SYS;
-    desired.freq = sample_rate;
-    desired.samples = 2048;
-    desired.callback = NULL;
-
-    device = SDL_OpenAudioDevice(NULL, 0, &desired, &device_spec, 0);
-    SDL_PauseAudioDevice(device, 0);
+    const SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, 44100 };
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, 0, 0);
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 }
 
 void queue(std::vector<SampleStereo> samples)
 {
-    SDL_QueueAudio(device, samples.data(), samples.size() * sizeof(SampleStereo));
+    SDL_PutAudioStreamData(stream, samples.data(), samples.size() * sizeof(SampleStereo));
 }
 
 bool needs_more_data()
 {
-    uint32_t queue = SDL_GetQueuedAudioSize(device);
-    if (queue < device_spec.size*2)
+    int queue = SDL_GetAudioStreamQueued(stream);
+    if (queue < sizeof(float) * 2 * 1024)
         return true;
     return false;
 }

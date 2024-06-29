@@ -1,4 +1,5 @@
-#include <SDL2/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <sdl3/SDL.h>
 #include "gfx.hpp"
 #include "audio/backend.hpp"
 #include "music/player.hpp"
@@ -31,7 +32,7 @@ int main(int argc, char **argv)
         while (SDL_PollEvent(&e)) {
             switch (e.type)
             {
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
                 return 0;
             }
         }
