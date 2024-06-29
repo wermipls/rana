@@ -74,10 +74,10 @@ class Reverb : public Effect {
     fv_Context ctx;
 
 public:
-    Reverb()
+    Reverb(float sample_rate = 44100)
     {
         fv_init(&ctx);
-        fv_set_samplerate(&ctx, 44100);
+        fv_set_samplerate(&ctx, sample_rate);
     }
 
     virtual void setParam(int index, float value)

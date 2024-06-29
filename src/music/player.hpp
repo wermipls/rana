@@ -45,7 +45,7 @@ struct PlaybackSample {
 
 
 class MusicSampler {
-    const float sr = 44100;
+    float sr = 44100;
 
     float volume_target = 0;
     float volume_actual = 0;
@@ -205,6 +205,11 @@ class MusicSampler {
 public:
     MusicSampler()
     {
+    }
+
+    void setSampleRate(float sample_rate)
+    {
+        sr = sample_rate;
     }
 
     void noteOff()
@@ -391,6 +396,13 @@ public:
         samplers.resize(voices);
     }
 
+    void setSampleRate(float sample_rate)
+    {
+        for (auto &n : samplers) {
+            n.setSampleRate(sample_rate);
+        }
+    }
+
     MusicSampler *sampler()
     {
         return &samplers[current];
@@ -450,12 +462,12 @@ public:
         switch (effect.type) {
             case Lowpass:    instance = new audio::Filter1Pole(sr, false); break;
             case Highpass:   instance = new audio::Filter1Pole(sr, true); break;
-            case Reverb:     instance = new audio::Reverb(); break;
+            case Reverb:     instance = new audio::Reverb(sr); break;
             case Delay:      instance = new audio::Delay(sr); break;
             case Distortion: instance = new audio::Distortion(); break;
-            case Bitcrush:   instance = new audio::Bitcrush(); break;
-            case Compressor: instance = new audio::Compressor(); break;
-            case Galactic:   instance = new audio::Galactic(); break;
+            case Bitcrush:   instance = new audio::Bitcrush(sr); break;
+            case Compressor: instance = new audio::Compressor(sr); break;
+            case Galactic:   instance = new audio::Galactic(sr); break;
         }
 
         if (instance == nullptr) {
@@ -551,6 +563,7 @@ public:
         sleep_lines.resize(ch_count);
         channel.resize(ch_count);
         for (auto &n : channel) {
+            n.setSampleRate(sr);
             auto sample_id = song.ins[0].smp[0].sampledata_id;
             n.setInstrument(song.ins[0], decoded_sample[sample_id].get());
         }

@@ -15,7 +15,7 @@ void init(int sample_rate)
 {
     SDL_Init(SDL_INIT_AUDIO);
 
-    const SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, 44100 };
+    const SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, sample_rate };
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, 0, 0);
     SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 }
