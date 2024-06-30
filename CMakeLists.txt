@@ -29,6 +29,7 @@ add_executable(rana WIN32
     src/main.cpp
     src/gfx.cpp
     src/sdl_error.cpp
+    src/audio/samples.cpp
     src/audio/freeverb/freeverb.c
 )
 

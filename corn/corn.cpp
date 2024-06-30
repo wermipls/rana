@@ -10,6 +10,7 @@
 #include <cmath>
 #include <map>
 #include <opus.h>
+#include "dr_flac.h"
 
 using namespace rana;
 

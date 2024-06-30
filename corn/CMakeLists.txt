@@ -20,6 +20,7 @@ add_executable(corn
     corn.cpp
     miniz/miniz.c
     pugixml/pugixml.cpp
+    ../src/audio/samples.cpp
 )
 
 target_include_directories(corn PRIVATE ../src)
