@@ -39,8 +39,8 @@ target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiag
 target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_link_libraries(rana -fansi-escape-codes)
-    target_compile_options(rana PRIVATE -fansi-escape-codes)
+    target_link_libraries(rana -fansi-escape-codes -fuse-ld=lld -g -Wl,--pdb=)
+    target_compile_options(rana PRIVATE -fansi-escape-codes -g -gcodeview)
 endif()
 
 if(MSVC)
