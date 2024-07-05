@@ -2,7 +2,6 @@
 
 #include "common.hpp"
 #include "freeverb/freeverb.h"
-#include <vector>
 
 namespace rana {
 namespace audio {
@@ -101,7 +100,8 @@ public:
 
 class Delay : public Effect {
     static constexpr auto max_delay_seconds = 5.0;
-    std::vector<SampleStereo> buffer;
+    SampleStereo *buffer;
+    size_t buffer_size;
     size_t buffer_pos = 0;
     size_t delay_size = 0;
     float feedback = 0.25;
@@ -111,13 +111,19 @@ class Delay : public Effect {
 public:
     Delay(Hz sample_rate = 44100)
     {
-        buffer.resize(sample_rate * max_delay_seconds);
-        for (auto &n : buffer) {
-            n.l = 0;
-            n.r = 0;
+        buffer_size = sample_rate * max_delay_seconds;
+        buffer = new SampleStereo[buffer_size];
+        for (size_t i = 0; i < buffer_size; i++) {
+            buffer[i].l = 0;
+            buffer[i].r = 0;
         }
 
         setDelay(0.2);
+    }
+
+    ~Delay()
+    {
+        delete[] buffer;
     }
 
     void setDelay(float value)
@@ -125,9 +131,9 @@ public:
         if (value > 1.0) value = 1.0;
         if (value < 0.0) value = 0.0;
 
-        delay_size = buffer.size() * value;
+        delay_size = buffer_size * value;
         if (delay_size == 0) delay_size = 1;
-        if (delay_size > buffer.size()) delay_size = buffer.size();
+        if (delay_size > buffer_size) delay_size = buffer_size;
 
         buffer_pos = buffer_pos % delay_size;
     }
