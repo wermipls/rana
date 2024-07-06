@@ -10,27 +10,21 @@ namespace rana {
 namespace audio {
 
 static SDL_AudioStream *stream;
+class MusicPlayer;
 
-void init(int sample_rate)
+void init(int sample_rate, SDL_AudioStreamCallback callback, void *userdata)
 {
     SDL_Init(SDL_INIT_AUDIO);
 
     const SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, sample_rate };
-    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, 0, 0);
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, callback, userdata);
     SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 }
 
-void queue(std::vector<SampleStereo> samples)
+void deinit()
 {
-    SDL_PutAudioStreamData(stream, samples.data(), samples.size() * sizeof(SampleStereo));
-}
-
-bool needs_more_data()
-{
-    int queue = SDL_GetAudioStreamQueued(stream);
-    if (queue < sizeof(float) * 2 * 1024)
-        return true;
-    return false;
+    SDL_DestroyAudioStream(stream);
+    stream = nullptr;
 }
 
 }

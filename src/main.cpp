@@ -7,6 +7,17 @@
 #include "log.hpp"
 #include "fs.hpp"
 
+void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+{
+    auto player = (rana::audio::MusicPlayer *)userdata;
+    while (additional_amount > 0) {
+        auto samples = player->getSamples(1);
+        auto bytes = samples.size() * 8;
+        SDL_PutAudioStreamData(stream, samples.data(), bytes);
+        additional_amount -= bytes;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 0) {
@@ -16,7 +27,6 @@ int main(int argc, char **argv)
     rana::fs::init(argv[0]);
 
     auto ctx = rana::gfx::Context();
-    rana::audio::init(44100);
 
     std::vector<uint8_t> mus;
     if (!rana::fs::readfile(mus, "out.ranamus")) {
@@ -27,24 +37,23 @@ int main(int argc, char **argv)
     song.serialize(songser);
 
     auto player = rana::audio::MusicPlayer(song, 44100);
+    rana::audio::init(44100, audio_callback, &player);
 
-    for (;;) {
+    bool running = true;
+    while (running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type)
             {
             case SDL_EVENT_QUIT:
-                return 0;
+                running = false;
             }
         }
 
-        if (rana::audio::needs_more_data()) {
-            rana::audio::queue(player.getSamples(32));
-        } else {
-            SDL_Delay(1);
-            continue;
-        }
+        SDL_Delay(1);
     }
+
+    rana::audio::deinit();
 
     return 0;
 }
