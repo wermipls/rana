@@ -15,7 +15,7 @@ all: $(BIN)
 freeverb.o: ../src/audio/freeverb/freeverb.c
 	gcc $^ -Ofast -c -o freeverb.o
 
-bin/rana%.dll: %.cpp $(HEADERS) Makefile freeverb.o
+bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp Makefile freeverb.o
 	mkdir -p bin
 	g++ $< $(SRC_AUX) freeverb.o -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
 
