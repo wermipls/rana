@@ -21,6 +21,10 @@ if (NOT TARGET opus)
     add_subdirectory(opus opus)
 endif()
 
+if (NOT TARGET PhysicsFS)
+    add_subdirectory(physfs physfs)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUA REQUIRED luajit)
 
@@ -58,3 +62,4 @@ target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
 
 
 target_link_libraries(rana opus)
+target_link_libraries(rana PhysFS::PhysFS-static)

@@ -5,7 +5,7 @@
 #include "music/player.hpp"
 #include "serializer.hpp"
 #include "log.hpp"
-#include "fio.hpp"
+#include "fs.hpp"
 
 int main(int argc, char **argv)
 {
@@ -13,12 +13,13 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    rana::fs::init(argv[0]);
+
     auto ctx = rana::gfx::Context();
     rana::audio::init(44100);
 
     std::vector<uint8_t> mus;
-    if (!rana::readfile(mus, "out.ranamus")) {
-        rana::log::err("failed to read music file...");
+    if (!rana::fs::readfile(mus, "out.ranamus")) {
         return -1;
     };
     auto song = rana::musfmt::Song();
