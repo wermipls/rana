@@ -31,6 +31,7 @@ pkg_check_modules(LUA REQUIRED luajit)
 # Your application target.
 add_executable(rana WIN32
     src/main.cpp
+    src/fs.cpp
     src/gfx.cpp
     src/sdl_error.cpp
     src/audio/samples.cpp
