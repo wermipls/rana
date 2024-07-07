@@ -36,6 +36,7 @@ add_executable(rana WIN32
     src/sdl_error.cpp
     src/audio/samples.cpp
     src/audio/freeverb/freeverb.c
+    src/glad.c
 )
 
 target_include_directories(rana PRIVATE external)

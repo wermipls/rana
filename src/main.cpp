@@ -50,7 +50,7 @@ int main(int argc, char **argv)
             }
         }
 
-        SDL_Delay(1);
+        ctx.draw();
     }
 
     rana::audio::deinit();

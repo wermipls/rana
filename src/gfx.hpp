@@ -11,9 +11,12 @@ public:
     Context(const char *title = "rana", int w = 1280, int h = 720);
     ~Context();
 
+    void draw();
+
 private:
-    SDL_Window *window = nullptr;
-    SDL_Renderer *renderer = nullptr;
+    SDL_Window *window;
+    SDL_GLContext glcontext;
+    unsigned int shaderprog, vao;
 };
 
 }
