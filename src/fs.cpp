@@ -1,6 +1,7 @@
 #include "fs.hpp"
 
 #include <physfs.h>
+#include <stdlib.h>
 #include "log.hpp"
 
 namespace rana {
