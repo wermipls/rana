@@ -46,12 +46,12 @@ static unsigned int load_shader(const char *fn, ShaderType type)
 
 unsigned int load_shader_program(const char *fn_fs, const char *fn_vs)
 {
-    auto vertexshader = load_shader("shaders/vs.glsl", ShaderType::Vertex);
-    auto fragshader = load_shader("shaders/fs.glsl", ShaderType::Fragment);
+    auto vs = load_shader(fn_vs, ShaderType::Vertex);
+    auto fs = load_shader(fn_fs, ShaderType::Fragment);
 
     auto shaderprog = glCreateProgram();
-    glAttachShader(shaderprog, vertexshader);
-    glAttachShader(shaderprog, fragshader);
+    glAttachShader(shaderprog, vs);
+    glAttachShader(shaderprog, fs);
     glLinkProgram(shaderprog);
 
     int success;
@@ -62,11 +62,36 @@ unsigned int load_shader_program(const char *fn_fs, const char *fn_vs)
         log::err("failed to link shader program:\n%s", info);
     }
 
-    glDeleteShader(vertexshader);
-    glDeleteShader(fragshader);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
 
     return shaderprog;
 }
+
+unsigned int create_vao(float *vertices, size_t sz_vertices, unsigned int *indices, size_t sz_indices)
+{
+    unsigned int vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    unsigned int vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sz_vertices, vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+
+    unsigned int ebo;
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sz_indices, indices, GL_STATIC_DRAW);
+
+    return vao;
+}
+
+static unsigned int vao2;
+static unsigned int sh2;
 
 Context::Context(const char *title, int w, int h)
 {
@@ -98,21 +123,23 @@ Context::Context(const char *title, int w, int h)
     float vertices[] = {
         -0.5f, -0.5f, 0.0f,
          0.5f, -0.5f, 0.0f,
-         0.0f,  0.5f, 0.0f,
+        -0.5f,  0.5f, 0.0f,
+         0.5f,  0.5f, 0.0f,
     };
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    unsigned int indices[] = {
+        0, 1, 2,
+        1, 2, 3,
+    };
 
-    unsigned int vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
-    glEnableVertexAttribArray(0);
+    vao = create_vao(vertices, sizeof(vertices), indices, sizeof(indices));
+    for (int i = 0; i < 12; i++) {
+        vertices[i] += 0.25;
+    }
+    vao2 = create_vao(vertices, sizeof(vertices), indices, sizeof(indices));
 
     shaderprog = load_shader_program("shaders/fs.glsl", "shaders/vs.glsl");
+    sh2 = load_shader_program("shaders/fs2.glsl", "shaders/vs.glsl");
 }
 
 Context::~Context()
@@ -128,7 +155,11 @@ void Context::draw()
 
     glUseProgram(shaderprog);
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glUseProgram(sh2);
+    glBindVertexArray(vao2);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     SDL_GL_SwapWindow(window);
 }
