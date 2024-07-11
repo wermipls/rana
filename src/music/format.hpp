@@ -209,6 +209,7 @@ enum class CommandType : uint8_t {
     FxSlideUp,
     FxSlideDown,
     NoteLegato,
+    FxMixerEffectParam,
 };
 
 struct CommandParam {
@@ -223,11 +224,15 @@ struct Command {
         uint8_t param_xy;
         uint8_t note;
     };
+    uint8_t mixerfx_value;
 
     void serialize(Serializer &s)
     {
         s.int8((uint8_t *)&type);
         s.int8(&param_xy);
+        if (type == CommandType::FxMixerEffectParam) {
+            s.int8(&mixerfx_value);
+        }
     }
 };
 

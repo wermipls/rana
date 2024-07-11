@@ -655,6 +655,14 @@ public:
             case FxTempo:
                 setBPM(cmd.param_xy);
                 break;
+            case FxMixerEffectParam: {
+                auto fx_i = cmd.param.x;
+                auto param_i = cmd.param.y;
+                float value = cmd.mixerfx_value / 255.0f;
+                auto trk = ch_to_track[column];
+                tracks[trk].fx[fx_i]->setParam(param_i, value);
+                break;
+            }
         }
     }
 

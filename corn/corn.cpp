@@ -550,6 +550,17 @@ void optimize_pattern(musfmt::Pattern &pattern)
     }
 }
 
+bool is_mixer_effect_param(int val)
+{
+    int effect = val >> 4;
+    int param = val & 0xf;
+    if (effect > 0 && param > 0) {
+        return true;
+    }
+
+    return false;
+}
+
 void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 {
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
@@ -660,6 +671,7 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     rana::musfmt::Command cmd{};
                     auto fxnum = val(ec, "Number"); 
                     bool is_global = false;
+                    bool is_track_scope = false;
                     bool turn_legato = false;
 
                     if (fxnum == "0A") {
@@ -695,6 +707,11 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                         is_global = true;
                         cmd.type = FxTempo;
                         cmd.param_xy = val_hex(ec, "Value", 0);
+                    } else if (auto num = val_hex(ec, "Number", 0); is_mixer_effect_param(num)) {
+                        is_track_scope = true;
+                        cmd.type = FxMixerEffectParam;
+                        cmd.param_xy = num - 0x11;
+                        cmd.mixerfx_value = val_hex(ec, "Value", 0);
                     } else {
                         continue;
                     }
@@ -707,6 +724,9 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                                 make_legato(parsed_lines[line_index][i]);
                             }
                             parsed_lines[line_index][i].push_back(cmd);
+                            if (is_track_scope) {
+                                break;
+                            }
                         }
                     }
                 }
