@@ -17,10 +17,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Reverb();
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;

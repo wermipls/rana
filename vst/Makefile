@@ -8,16 +8,17 @@ BIN = $(addprefix bin/rana,$(SRC:.cpp=.dll))
 
 CFLAGS = -shared -static-libgcc -static -Ofast \
          -Wall -Wno-narrowing -Wno-write-strings \
+		 -Wno-stringop-truncation \
          -DPLUGIN_VENDOR=\""$(PLUGIN_VENDOR)"\" \
 
 all: $(BIN)
 
 freeverb.o: ../src/audio/freeverb/freeverb.c
-	gcc $^ -Ofast -c -o freeverb.o
+	$(CC) $^ -Ofast -c -o freeverb.o
 
 bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp Makefile freeverb.o
 	mkdir -p bin
-	g++ $< $(SRC_AUX) freeverb.o -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
+	$(CXX) $< $(SRC_AUX) freeverb.o -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
 
 clean:
-	rm $(BIN) freeverb.o
+	$(RM) $(BIN) freeverb.o

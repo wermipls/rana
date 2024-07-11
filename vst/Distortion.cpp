@@ -13,10 +13,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Distortion();
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;

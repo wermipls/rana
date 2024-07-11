@@ -22,7 +22,6 @@ struct Param {
 struct EffectWrapper {
     std::vector<Param> params;
 
-    virtual void vstSetSamplingRate(float sr) = 0;
     virtual std::vector<rana::audio::SampleStereo> process(std::vector<rana::audio::SampleStereo> in) = 0;
     virtual void vstSetParam(int index, float value) = 0;
     virtual ~EffectWrapper() = default;
@@ -81,35 +80,34 @@ VstInt32 VstEffect::getVendorVersion() { return 1000; }
 
 void VstEffect::setParameter(VstInt32 index, float value)
 {
-    if (index >= fx->params.size()) return;
+    if ((uint32_t)index >= fx->params.size()) return;
     fx->vstSetParam(index, value);
 }
 
 float VstEffect::getParameter(VstInt32 index)
 {
-    if (index >= fx->params.size()) return 0;
+    if ((uint32_t)index >= fx->params.size()) return 0;
     auto &p = fx->params[index];
     return p.value;
 }
 
 void VstEffect::getParameterName(VstInt32 index, char *label) 
 {
-    if (index >= fx->params.size()) return;
+    if ((uint32_t)index >= fx->params.size()) return;
     auto &p = fx->params[index];
     vst_strncpy(label, p.name, kVstMaxParamStrLen);
 }
 
 void VstEffect::getParameterDisplay(VstInt32 index, char *text) 
 {
-    if (index >= fx->params.size()) return;
+    if ((uint32_t)index >= fx->params.size()) return;
     auto &p = fx->params[index];
     snprintf(text, kVstMaxParamStrLen, "%f", p.value);
 }
 
 void VstEffect::getParameterLabel(VstInt32 index, char *label) 
 {
-    if (index >= fx->params.size()) return;
-    auto &p = fx->params[index];
+    if ((uint32_t)index >= fx->params.size()) return;
     vst_strncpy(label, "", kVstMaxParamStrLen);
 }
 
@@ -154,14 +152,14 @@ void VstEffect::processReplacing(float **in, float **out, VstInt32 frames)
 
     std::vector<rana::audio::SampleStereo> buf(frames);
 
-    for (size_t i = 0; i < frames; i++) {
+    for (int i = 0; i < frames; i++) {
         buf[i].l = in[0][i];
         buf[i].r = in[1][i];
     }
 
     buf = fx->process(buf);
 
-    for (size_t i = 0; i < frames; i++) {
+    for (int i = 0; i < frames; i++) {
         out[0][i] = buf[i].l;
         out[1][i] = buf[i].r;
     }

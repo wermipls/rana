@@ -11,11 +11,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Filter1Pole(44100, false);
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-        fx = Filter1Pole(sr);
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;

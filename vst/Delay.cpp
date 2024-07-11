@@ -14,11 +14,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Delay(44100);
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-        fx = Delay(sr);
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;

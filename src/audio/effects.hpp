@@ -24,7 +24,7 @@ class Filter1Pole : public Effect {
     const char *paramNames[paramCount] = {
         "cutoff",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     Hz sr;
     float coeff = 0;
@@ -98,7 +98,7 @@ class Reverb : public Effect {
         "lowpass",
         "highpass",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     fv_Context ctx;
 
@@ -144,7 +144,7 @@ class Delay : public Effect {
         "feedback",
         "delay",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     static constexpr auto max_delay_seconds = 5.0;
     SampleStereo *buffer;
@@ -219,7 +219,7 @@ class Distortion : public Effect {
         "mix",
         "mode",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     static constexpr float gain_multi = 127;
     enum Mode {
@@ -332,7 +332,7 @@ class Bitcrush : public Effect {
         "bits",
         "rate",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     int bits = 16;
     float sr, rate;
@@ -426,15 +426,15 @@ class Compressor : public Effect {
         "ratio",
         "makeup",
     };
-    float params[paramCount];
+    float params[paramCount] = {};
 
     static constexpr float PeakSmoothingHz = 20.0f;
     float sr;
     float pp_coeff;
     float max = 0;
     float pp = 0;
-    float attack_coeff;
-    float release_coeff;
+    float attack_coeff = 0.0;
+    float release_coeff = 0.0;
     float threshold_db = 0.8;
     float volume_actual = 1.0;
     float volume_target = 0;
@@ -612,7 +612,7 @@ class Galactic : public Effect {
     static constexpr auto C = 2;
     static constexpr auto D = 3;
     static constexpr auto E = 4;
-    float param[paramCount];
+    float param[paramCount] = {};
 
     void update()
     {

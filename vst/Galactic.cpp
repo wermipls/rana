@@ -15,11 +15,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Galactic();
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-        fx = Galactic(sr);
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;

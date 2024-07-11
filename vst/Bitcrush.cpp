@@ -12,11 +12,6 @@ struct EffectImpl : public EffectWrapper {
         fx = Bitcrush();
     }
 
-    void vstSetSamplingRate(float sr)
-    {
-        fx = Bitcrush(sr);
-    }
-
     void vstSetParam(int index, float value)
     {
         params[index].value = value;
