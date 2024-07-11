@@ -12,10 +12,20 @@ class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
     virtual void setParam(int index, float value) = 0;
+    virtual float getParam(int index) { return NAN; }
+    virtual int getParamCount() { return 0; }
+    virtual const char *getParamName(int index) { return "n/a"; }
+    virtual const char *getName() { return "Effect"; }
     virtual ~Effect() = default;
 };
 
 class Filter1Pole : public Effect {
+    static constexpr auto paramCount = 1;
+    const char *paramNames[paramCount] = {
+        "cutoff",
+    };
+    float params[paramCount];
+
     Hz sr;
     float coeff = 0;
     bool highpass;
@@ -43,8 +53,16 @@ public:
         coeff = factor_1pole(freq, sr);
     }
 
+    virtual const char *getName() { return highpass ? "Highpass" : "Lowpass"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
+
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: coeff = normalized2coeff(value); break;
         }
@@ -70,6 +88,18 @@ public:
 };
 
 class Reverb : public Effect {
+    static constexpr auto paramCount = 7;
+    const char *paramNames[paramCount] = {
+        "wet",
+        "dry",
+        "width",
+        "roomsize",
+        "damp",
+        "lowpass",
+        "highpass",
+    };
+    float params[paramCount];
+
     fv_Context ctx;
 
 public:
@@ -81,6 +111,9 @@ public:
 
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: fv_set_wet(&ctx, value); break;
             case 1: fv_set_dry(&ctx, value); break;
@@ -92,6 +125,11 @@ public:
         }
     }
 
+    virtual const char *getName() { return "Reverb"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
+
     virtual void process(SampleStereo *in, size_t n)
     {
         fv_process(&ctx, &in->l, n*2);
@@ -99,6 +137,15 @@ public:
 };
 
 class Delay : public Effect {
+    static constexpr auto paramCount = 4;
+    const char *paramNames[paramCount] = {
+        "wet",
+        "dry",
+        "feedback",
+        "delay",
+    };
+    float params[paramCount];
+
     static constexpr auto max_delay_seconds = 5.0;
     SampleStereo *buffer;
     size_t buffer_size;
@@ -121,11 +168,6 @@ public:
         setDelay(0.2);
     }
 
-    ~Delay()
-    {
-        delete[] buffer;
-    }
-
     void setDelay(float value)
     {
         if (value > 1.0) value = 1.0;
@@ -140,6 +182,9 @@ public:
 
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: wet = value; break;
             case 1: dry = value; break;
@@ -147,6 +192,11 @@ public:
             case 3: setDelay(value); break;
         }
     }
+
+    virtual const char *getName() { return "Delay"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -163,6 +213,14 @@ public:
 };
 
 class Distortion : public Effect {
+    static constexpr auto paramCount = 3;
+    const char *paramNames[paramCount] = {
+        "amount",
+        "mix",
+        "mode",
+    };
+    float params[paramCount];
+
     static constexpr float gain_multi = 127;
     enum Mode {
         Softclip,
@@ -199,12 +257,20 @@ public:
 
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: setAmount(value); break;
             case 1: setMix(value); break;
             case 2: setMode(value); break;
         }
     }
+
+    virtual const char *getName() { return "Distortion"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -261,6 +327,13 @@ public:
 };
 
 class Bitcrush : public Effect {
+    static constexpr auto paramCount = 2;
+    const char *paramNames[paramCount] = {
+        "bits",
+        "rate",
+    };
+    float params[paramCount];
+
     int bits = 16;
     float sr, rate;
     float t = 0;
@@ -307,11 +380,19 @@ public:
 
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: setBits(value); break;
             case 1: setRate(value); break;
         }
     }
+
+    virtual const char *getName() { return "Bitcrush"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -337,6 +418,16 @@ public:
 };
 
 class Compressor : public Effect {
+    static constexpr auto paramCount = 5;
+    const char *paramNames[paramCount] = {
+        "threshold",
+        "attack",
+        "release",
+        "ratio",
+        "makeup",
+    };
+    float params[paramCount];
+
     static constexpr float PeakSmoothingHz = 20.0f;
     float sr;
     float pp_coeff;
@@ -387,6 +478,9 @@ public:
 
     virtual void setParam(int index, float value)
     {
+        if (index >= paramCount) return;
+        params[index] = value;
+
         switch (index) {
             case 0: threshold_db = dB(std::pow(value, 3) * 0.999f + 0.001f); break;
             case 1: attack_coeff  = factor_1pole(1.0f + std::pow(1.0f - value, 10) * 22049.0f, sr); break;
@@ -395,6 +489,11 @@ public:
             case 4: makeup = std::pow(value, 3) * 16.0f + 1.0f; break;
         }
     }
+
+    virtual const char *getName() { return "Compressor"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return params[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -416,6 +515,15 @@ public:
 // airwindows uses the MIT license
 // https://github.com/airwindows/airwindows
 class Galactic : public Effect {
+    static constexpr auto paramCount = 5;
+    const char *paramNames[paramCount] = {
+        "replace",
+        "brightness",
+        "detune",
+        "bigness",
+        "dry/wet",
+    };
+
     float sr;
 
     float iirAL;
@@ -504,7 +612,7 @@ class Galactic : public Effect {
     static constexpr auto C = 2;
     static constexpr auto D = 3;
     static constexpr auto E = 4;
-    float param[5];
+    float param[paramCount];
 
     void update()
     {
@@ -661,6 +769,11 @@ public:
         }
         update();
     }
+
+    virtual const char *getName() { return "Galactic"; }
+    virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
+    virtual float getParam(int index) { return param[index % paramCount]; }
+    virtual int getParamCount() { return paramCount; }
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
