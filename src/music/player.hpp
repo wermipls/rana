@@ -5,6 +5,7 @@
 #include "audio/samples.hpp"
 #include <cmath>
 #include <memory>
+#include <imgui.h>
 
 namespace rana {
 namespace audio {
@@ -441,9 +442,10 @@ public:
 
 class Track {
     float sr;
-    std::vector<std::unique_ptr<Effect>> fx;
 
 public:
+    std::vector<std::unique_ptr<Effect>> fx;
+
     Track(float sample_rate) : sr{sample_rate}
     {
     }
@@ -490,7 +492,7 @@ public:
 };
 
 class MusicPlayer {
-    const musfmt::Song song;
+    musfmt::Song song;
     const float sr;
     float samples_tick;
     float bpm;
@@ -729,6 +731,54 @@ public:
     void setTicks(int ticks) { ticks_line = ticks; recalculateSamplesTick(); }
     void setLines(int lines) { lines_beat = lines; recalculateSamplesTick(); }
     void setBPM(int bpm) { this->bpm = bpm; recalculateSamplesTick(); log::info("bpm: %f", this->bpm); }
+
+    void drawMixer()
+    {
+        ImGui::Begin("Mixer");
+
+        int i = 0;
+        for (auto &t : song.mixer.tracks) {
+            ImGui::PushID(i);
+            ImGui::BeginGroup();
+
+            ImGui::Text("%s", t.name.c_str());
+            float db = 20 * std::log10(t.volume);
+            ImGui::VSliderFloat("##v", ImVec2(80, 160), &db, -30.0f, 6.0f, "%.1f dB");
+            if (db <= -30.0f) {
+                t.volume = 0;
+            } else {
+                t.volume = from_dB(db);
+            }
+
+            ImGui::BeginChild(ImGuiID(i+9999), ImVec2(80, 0), 0, 0);
+
+            for (auto &fx : tracks[i].fx) {
+                auto instance = fx.get();
+                ImGui::PushID(instance);
+                auto count = instance->getParamCount();
+                if (ImGui::TreeNode(instance->getName())) {
+                    for (int i = 0; i < count; i++) {
+                        auto val = instance->getParam(i);
+                        auto name = instance->getParamName(i);
+                        ImGui::PushID(i);
+                        ImGui::SliderFloat("##v", &val, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                        instance->setParam(i, val);
+                        ImGui::PopID();
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::EndChild();
+
+            ImGui::EndGroup();
+            ImGui::PopID();
+            ImGui::SameLine();
+            i++;
+        }
+        ImGui::End();
+    }
 };
 
 }

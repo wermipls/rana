@@ -3,6 +3,10 @@
 #include "log.hpp"
 #include <glad/glad.h>
 #include "fs.hpp"
+#include <SDL3/SDL_init.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_opengl3.h>
 
 namespace rana {
 namespace gfx {
@@ -95,6 +99,13 @@ static unsigned int sh2;
 
 Context::Context(const char *title, int w, int h)
 {
+    SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
     window = SDL_CreateWindow(
         title,
         w,
@@ -140,10 +151,35 @@ Context::Context(const char *title, int w, int h)
 
     shaderprog = load_shader_program("shaders/fs.glsl", "shaders/vs.glsl");
     sh2 = load_shader_program("shaders/fs2.glsl", "shaders/vs.glsl");
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
+
+    ImFontConfig cfg;
+    cfg.PixelSnapH = true;
+    cfg.OversampleH = 1;
+    cfg.OversampleV = 1;
+    io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.AntiAliasedLinesUseTex = false;
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL3_InitForOpenGL(window, glcontext);
+    ImGui_ImplOpenGL3_Init();
 }
 
 Context::~Context()
 {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
 }
@@ -160,6 +196,9 @@ void Context::draw()
     glUseProgram(sh2);
     glBindVertexArray(vao2);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     SDL_GL_SwapWindow(window);
 }

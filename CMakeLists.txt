@@ -37,9 +37,18 @@ add_executable(rana WIN32
     src/audio/samples.cpp
     src/audio/freeverb/freeverb.c
     src/glad.c
+    imgui/imgui.cpp
+    imgui/imgui_demo.cpp
+    imgui/imgui_draw.cpp
+    imgui/imgui_tables.cpp
+    imgui/imgui_widgets.cpp
+    imgui/backends/imgui_impl_opengl3.cpp
+    imgui/backends/imgui_impl_sdl3.cpp
 )
 
 target_include_directories(rana PRIVATE external)
+target_include_directories(rana PRIVATE imgui)
+target_include_directories(rana PRIVATE imgui/backends)
 target_include_directories(rana PRIVATE src)
 target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)

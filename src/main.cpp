@@ -6,6 +6,8 @@
 #include "serializer.hpp"
 #include "log.hpp"
 #include "fs.hpp"
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_opengl3.h>
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
 {
@@ -48,7 +50,16 @@ int main(int argc, char **argv)
             case SDL_EVENT_QUIT:
                 running = false;
             }
+
+            ImGui_ImplSDL3_ProcessEvent(&e);
         }
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+        player.drawMixer();
 
         ctx.draw();
     }
