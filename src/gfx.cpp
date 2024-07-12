@@ -164,7 +164,7 @@ Context::Context(const char *title, int w, int h)
     cfg.PixelSnapH = true;
     cfg.OversampleH = 1;
     cfg.OversampleV = 1;
-    io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+    io.Fonts->AddFontFromFileTTF("monospace.ttf", 15.0f);
 
     ImGuiStyle &style = ImGui::GetStyle();
     style.AntiAliasedLinesUseTex = false;
