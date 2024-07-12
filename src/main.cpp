@@ -60,6 +60,7 @@ int main(int argc, char **argv)
 
         ImGui::ShowDemoWindow();
         player.drawMixer();
+        player.drawPattern();
 
         ctx.draw();
     }

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <memory>
 #include <imgui.h>
+#include "pattern_render.hpp"
 
 namespace rana {
 namespace audio {
@@ -785,6 +786,76 @@ public:
             ImGui::SameLine();
             i++;
         }
+        ImGui::End();
+    }
+
+    void drawPattern()
+    {
+        auto &ptn = currentPattern();
+        auto rpt = render_pattern(ptn);
+        auto ch_count = ptn.ch.size();
+        ImGui::Begin("Pattern");
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ));
+        if (ImGui::BeginTable("table2", ch_count + 1, ImGuiTableFlags_SizingFixedFit)) {
+            ImGui::TableSetupColumn("", 0, 45.0f);
+            for (size_t i = 0; i < ch_count; i++) {
+                auto w = rpt.col[i].getMaxCharWidth();
+                char dummy[w+1];
+                for (int i = 0; i < sizeof(dummy); i++) {
+                    dummy[i] = ' ';
+                }
+                dummy[sizeof(dummy) - 1] = 0;
+                auto ts = ImGui::CalcTextSize(dummy);
+                ImGui::TableSetupColumn("", 0, ts.x + 5.0f);
+            }
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            for (int i = 16; i; i--) {
+                ImGui::Text("");
+            }
+            ImGui::Text("==>");
+
+            for (size_t i = 0; i < ch_count; i++) {
+                ImGui::TableSetColumnIndex(i + 1);
+                int l = 0;
+
+                for (int j = ptn.lines - lines_left - 16; j < ptn.lines; j++, l++) {
+                    auto &row = rpt.col[i].row[j];
+                    if (j < 0) {
+                        ImGui::Text("");
+                        continue;
+                    }
+                    if (j >= rpt.col[i].row.size()) {
+                        ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, l == 16 ? 0.5f : 0.1f), "---");
+                        continue;
+                    }
+
+
+                    if (row.note[0] != ' ') {
+                        ImGui::Text(row.note);
+                    } else {
+                        ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, l == 16 ? 0.5f : 0.1f), "---");
+                    }
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.6f, 0.7f), "%c", row.ins);
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.1f, 0.9f), row.vol);
+                    for (auto &f : row.fx) {
+                        ImGui::SameLine();
+                        ImVec4 c = ImVec4(1.0f, 0.2f, 0.8f, 1.0f);
+                        if (f.str[0] != ' ') {
+                            c = {1.0f, 1.0f, 1.0f, 0.5f};
+                        }
+                        if (f.str[1] == 'S') {
+                            c = {0.8f, 1.0f, 0.8f, 0.8f};
+                        }
+                        ImGui::TextColored(c, f.str);
+                    }
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::PopStyleVar();
         ImGui::End();
     }
 };
