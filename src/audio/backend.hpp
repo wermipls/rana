@@ -18,6 +18,10 @@ void init(int sample_rate, SDL_AudioStreamCallback callback, void *userdata)
 
     const SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, sample_rate };
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, callback, userdata);
+    if (!stream) {
+        sdl_error("failed to open audio device stream");
+        return;
+    }
     SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 }
 
