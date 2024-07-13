@@ -57,18 +57,11 @@ option(PHYSFS_BUILD_STATIC "" ON)
 option(PHYSFS_BUILD_SHARED "" OFF)
 option(PHYSFS_BUILD_TEST "" OFF)
 option(PHYSFS_BUILD_DOCS "" OFF)
+set(PHYSFS_TARGETNAME_UNINSTALL "physfs_uninstall" CACHE STRING "")
 if (NOT TARGET PhysicsFS)
-    add_subdirectory(physfs physfs)
+    add_subdirectory(physfs physfs EXCLUDE_FROM_ALL)
 endif()
 target_link_libraries(rana PhysFS::PhysFS-static)
-
-# LuaJIT
-find_package(PkgConfig REQUIRED)
-
-pkg_check_modules(LUA REQUIRED luajit)
-target_link_libraries(rana ${LUA_LIBRARIES})
-target_include_directories(rana PUBLIC ${LUA_INCLUDE_DIRS})
-target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
 
 # imgui
 target_include_directories(rana PRIVATE imgui)
@@ -76,15 +69,16 @@ target_include_directories(rana PRIVATE imgui/backends)
 
 # tracy
 target_include_directories(rana PRIVATE tracy/public)
-#target_compile_options(rana PRIVATE -DWINVER=0x0601 -D_WIN32_WINNT=0x0601)
-target_link_libraries(rana ws2_32 dbghelp)
+if(MSYS OR MINGW)
+    target_link_libraries(rana ws2_32 dbghelp)
+endif()
 
 # others
 target_include_directories(rana PRIVATE src)
 target_include_directories(rana PRIVATE external)
 
 # compile flags
-target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
+target_link_libraries(rana -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -fdiagnostics-color=always)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
