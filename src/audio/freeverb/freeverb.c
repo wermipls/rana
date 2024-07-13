@@ -5,7 +5,7 @@
   #define M_PI 3.14159265358979323846
 #endif
 
-#define undenormalize(n) { if (xabs(n) < 1e-37) { (n) = 0; } }
+#define undenormalize(n)
 
 
 static inline float xabs(float n) {
