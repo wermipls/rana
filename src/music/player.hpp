@@ -7,6 +7,7 @@
 #include <memory>
 #include <imgui.h>
 #include "pattern_render.hpp"
+#include <tracy/Tracy.hpp>
 
 namespace rana {
 namespace audio {
@@ -708,6 +709,7 @@ public:
 
     std::vector<SampleStereo> getSamples(size_t n_samples)
     {
+        ZoneScoped;
         n_samples = samples_tick + error_samples;
         error_samples += samples_tick - n_samples;
         doSequenceTick();
@@ -715,6 +717,7 @@ public:
         std::vector<SampleStereo> samples(n_samples);
 
         for (size_t i = 0; i < tracks.size(); i++) {
+            ZoneScopedN("Track");
             std::vector<SampleStereo> track_buf(n_samples);
 
             for (size_t j = 0; j < ch_to_track.size(); j++) {
@@ -732,7 +735,10 @@ public:
             }
         }
 
-        master.process(samples.data(), samples.size());
+        {
+            ZoneScopedN("Master Track");
+            master.process(samples.data(), samples.size());
+        }
 
         return samples;
     }
@@ -743,6 +749,7 @@ public:
 
     void drawMixer()
     {
+        ZoneScoped;
         ImGui::Begin("Mixer");
 
         int i = 0;
@@ -791,6 +798,7 @@ public:
 
     void drawPattern()
     {
+        ZoneScoped;
         auto &ptn = currentPattern();
         auto rpt = render_pattern(ptn);
         auto ch_count = ptn.ch.size();

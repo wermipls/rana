@@ -2,6 +2,7 @@
 
 #include "common.hpp"
 #include "freeverb/freeverb.h"
+#include <tracy/Tracy.hpp>
 
 namespace rana {
 namespace audio {
@@ -70,6 +71,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Filter1Pole");
         if (highpass) {
             for (size_t i = 0; i < n; i++) {
                 q.l += (in[i].l - q.l) * coeff;
@@ -132,6 +134,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Reverb");
         fv_process(&ctx, &in->l, n*2);
     }
 };
@@ -200,6 +203,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Delay");
         for (size_t i = 0; i < n; i++) {
             buffer_pos++;
             buffer_pos = buffer_pos % delay_size;
@@ -274,6 +278,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Distortion");
         switch (mode) 
         {
         case Softclip:
@@ -396,6 +401,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Bitcrush");
         for (size_t i = 0; i < n; i++) {
             // rate
             t += rate / sr;
@@ -497,6 +503,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        ZoneScopedN("Compressor");
         for (size_t i = 0; i < n; i++) {
             peakToPeak(in[i]);
             auto delta_db = pp - threshold_db;
@@ -777,6 +784,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
+        ZoneScopedN("Galactic");
         float *in1 = &in->l;
         float *in2 = &in->r;
         float *out1 = in1;

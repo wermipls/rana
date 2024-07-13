@@ -25,6 +25,7 @@ add_executable(rana WIN32
     imgui/imgui_widgets.cpp
     imgui/backends/imgui_impl_opengl3.cpp
     imgui/backends/imgui_impl_sdl3.cpp
+    tracy/public/TracyClient.cpp
 )
 
 # handle dependencies
@@ -73,6 +74,11 @@ target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
 target_include_directories(rana PRIVATE imgui)
 target_include_directories(rana PRIVATE imgui/backends)
 
+# tracy
+target_include_directories(rana PRIVATE tracy/public)
+#target_compile_options(rana PRIVATE -DWINVER=0x0601 -D_WIN32_WINNT=0x0601)
+target_link_libraries(rana ws2_32 dbghelp)
+
 # others
 target_include_directories(rana PRIVATE src)
 target_include_directories(rana PRIVATE external)
@@ -95,4 +101,9 @@ endif()
 option(RANA_BUILD_CORN "build the 'corn' converter tool" OFF)
 if(RANA_BUILD_CORN)
     add_subdirectory(corn)
+endif()
+
+option(RANA_TRACY "build with Tracy profiler support" OFF)
+if(RANA_TRACY)
+    target_compile_options(rana PRIVATE -DTRACY_ENABLE)
 endif()

@@ -8,9 +8,11 @@
 #include "fs.hpp"
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
+#include <tracy/Tracy.hpp>
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
 {
+    FrameMarkStart("Audio processing");
     auto player = (rana::audio::MusicPlayer *)userdata;
     while (additional_amount > 0) {
         auto samples = player->getSamples(1);
@@ -18,6 +20,7 @@ void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additio
         SDL_PutAudioStreamData(stream, samples.data(), bytes);
         additional_amount -= bytes;
     }
+    FrameMarkEnd("Audio processing");
 }
 
 int main(int argc, char **argv)
@@ -63,6 +66,7 @@ int main(int argc, char **argv)
         player.drawPattern();
 
         ctx.draw();
+        FrameMark;
     }
 
     rana::audio::deinit();
