@@ -79,7 +79,7 @@ target_include_directories(rana PRIVATE external)
 
 # compile flags
 target_link_libraries(rana -static -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
-target_compile_options(rana PRIVATE -ggdb -Ofast -fdiagnostics-color=always)
+target_compile_options(rana PRIVATE -ggdb -fdiagnostics-color=always)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_libraries(rana -fansi-escape-codes -fuse-ld=lld -g -Wl,--pdb=)
