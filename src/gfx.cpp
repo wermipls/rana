@@ -180,7 +180,7 @@ Context::~Context()
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(glcontext);
+    SDL_GL_DestroyContext(glcontext);
     SDL_DestroyWindow(window);
 }
 
