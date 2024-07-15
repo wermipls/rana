@@ -5,6 +5,7 @@
 #include "audio/samples.hpp"
 #include <cmath>
 #include <memory>
+#include <stdexcept>
 #include <imgui.h>
 #include "pattern_render.hpp"
 #include <tracy/Tracy.hpp>
@@ -121,7 +122,7 @@ class MusicSampler {
 
     void updateVibrato(float deltatime)
     {
-        vibrato_phase += vibrato_speed * M_PI * 2.0f * deltatime;
+        vibrato_phase += vibrato_speed * pi * 2.0f * deltatime;
         vibrato_current = 1 + std::sin(vibrato_phase) * vibrato_intensity;
         //log::info("p %f in %f sp %f cur %f", vibrato_phase, vibrato_intensity, vibrato_speed, vibrato_current);
     }
@@ -472,6 +473,7 @@ public:
             case Bitcrush:   instance = new audio::Bitcrush(sr); break;
             case Compressor: instance = new audio::Compressor(sr); break;
             case Galactic:   instance = new audio::Galactic(sr); break;
+            case Biquad:     instance = new audio::Biquad(sr); break;
         }
 
         if (instance == nullptr) {
@@ -808,12 +810,12 @@ public:
             ImGui::TableSetupColumn("", 0, 45.0f);
             for (size_t i = 0; i < ch_count; i++) {
                 auto w = rpt.col[i].getMaxCharWidth();
-                char dummy[w+1];
-                for (int i = 0; i < sizeof(dummy); i++) {
+                std::vector<char> dummy(w+1);
+                for (int i = 0; i < dummy.size(); i++) {
                     dummy[i] = ' ';
                 }
-                dummy[sizeof(dummy) - 1] = 0;
-                auto ts = ImGui::CalcTextSize(dummy);
+                dummy[dummy.size() - 1] = 0;
+                auto ts = ImGui::CalcTextSize(dummy.data());
                 ImGui::TableSetupColumn("", 0, ts.x + 5.0f);
             }
             ImGui::TableNextRow();
