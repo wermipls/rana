@@ -811,7 +811,7 @@ public:
             for (size_t i = 0; i < ch_count; i++) {
                 auto w = rpt.col[i].getMaxCharWidth();
                 std::vector<char> dummy(w+1);
-                for (int i = 0; i < dummy.size(); i++) {
+                for (size_t i = 0; i < dummy.size(); i++) {
                     dummy[i] = ' ';
                 }
                 dummy[dummy.size() - 1] = 0;
@@ -823,33 +823,32 @@ public:
             for (int i = 16; i; i--) {
                 ImGui::Text("");
             }
-            ImGui::Text("==>");
+            ImGui::TextUnformatted("==>");
 
             for (size_t i = 0; i < ch_count; i++) {
                 ImGui::TableSetColumnIndex(i + 1);
                 int l = 0;
 
                 for (int j = ptn.lines - lines_left - 16; j < ptn.lines; j++, l++) {
-                    auto &row = rpt.col[i].row[j];
                     if (j < 0) {
-                        ImGui::Text("");
+                        ImGui::TextUnformatted("");
                         continue;
                     }
-                    if (j >= rpt.col[i].row.size()) {
+                    if (j >= (int)rpt.col[i].row.size()) {
                         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, l == 16 ? 0.5f : 0.1f), "---");
                         continue;
                     }
-
+                    auto &row = rpt.col[i].row[j];
 
                     if (row.note[0] != ' ') {
-                        ImGui::Text(row.note);
+                        ImGui::TextUnformatted(row.note);
                     } else {
                         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, l == 16 ? 0.5f : 0.1f), "---");
                     }
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.6f, 0.7f), "%c", row.ins);
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.1f, 0.9f), row.vol);
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.1f, 0.9f), "%s", row.vol);
                     for (auto &f : row.fx) {
                         ImGui::SameLine();
                         ImVec4 c = ImVec4(1.0f, 0.2f, 0.8f, 1.0f);
@@ -859,7 +858,7 @@ public:
                         if (f.str[1] == 'S') {
                             c = {0.8f, 1.0f, 0.8f, 0.8f};
                         }
-                        ImGui::TextColored(c, f.str);
+                        ImGui::TextColored(c, "%s", f.str);
                     }
                 }
             }
