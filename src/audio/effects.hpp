@@ -799,7 +799,7 @@ public:
             auto drySampleR = inputSampleR;
 
             vibM += (oldfpd * drift);
-            if (vibM > (M_PI * 2.0f)) {
+            if (vibM > (pi * 2.0f)) {
                 vibM = 0.0f;
                 oldfpd = 0.4294967295f + (fpdL * 0.0000000000618f);
             }
@@ -810,7 +810,7 @@ public:
             if (countM < 0 || countM > delayM) countM = 0;
 
             float offsetML = (sin(vibM) + 1.0f) * 127.0f;
-            float offsetMR = (sin(vibM + (M_PI / 2.0f)) + 1.0) * 127.0f;
+            float offsetMR = (sin(vibM + (pi / 2.0f)) + 1.0) * 127.0f;
             int workingML = countM + offsetML;
             int workingMR = countM + offsetMR;
             float interpolML = (aML[workingML - ((workingML > delayM) ? delayM + 1 : 0)]

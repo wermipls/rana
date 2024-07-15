@@ -5,6 +5,7 @@
 namespace rana {
 namespace audio {
 
+constexpr double pi = 3.14159265358979323846;
 typedef double Hz;
 
 struct SampleStereo {
@@ -13,7 +14,7 @@ struct SampleStereo {
 
 static inline double normalize_frequency(Hz freq, Hz sr)
 {
-    return freq * 2. * M_PI / sr; 
+    return freq * 2. * pi / sr; 
 }
 
 static inline double derive_1pole_factor(double freq)
@@ -33,7 +34,7 @@ static inline double factor_1pole(Hz freq, Hz sr)
 static inline SampleStereo pan_equal_power(float pan)
 {
     pan += 1.f;
-    pan *= M_PI / 4;
+    pan *= pi / 4;
 
     return SampleStereo{
         std::sin(pan),
