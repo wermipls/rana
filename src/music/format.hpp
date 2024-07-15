@@ -120,6 +120,7 @@ enum class EffectType : uint8_t {
     Bitcrush,
     Compressor,
     Galactic,
+    Biquad,
 };
 
 struct Effect : public Serializable {

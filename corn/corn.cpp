@@ -412,6 +412,8 @@ void parse_effects(pugi::xml_node &devices, std::vector<musfmt::Effect> &effects
             fx.type = Compressor;
         } else if (pid == "ranaGalactic") {
             fx.type = Galactic;
+        } else if (pid == "ranaBiquad") {
+            fx.type = Biquad;
         } else {
             log::warn("ignoring unsupported plugin %s", pid.c_str());
             continue;
