@@ -549,8 +549,6 @@ class Biquad : public Effect {
     float q = 0.5;
     float gain_db = 0.0;
 
-    bool has_warned_already;
-
     void recalculateCoeffs()
     {
         float nf = 2.0f * pi * cutoff / (sr * 2.0f); // 2x oversample
