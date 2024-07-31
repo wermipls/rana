@@ -78,12 +78,26 @@ target_include_directories(rana PRIVATE src)
 target_include_directories(rana PRIVATE external)
 
 # compile flags
-target_link_libraries(rana -static-libgcc -static-libstdc++ -flto -fdiagnostics-color=always)
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "-s")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
+
+target_link_libraries(rana -static-libgcc -static-libstdc++ -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -fdiagnostics-color=always)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_libraries(rana -fansi-escape-codes -fuse-ld=lld -g -Wl,--pdb=)
     target_compile_options(rana PRIVATE -fansi-escape-codes -g -gcodeview)
+    # gcc seems to have some trouble with lto...
+    string(APPEND CMAKE_CXX_FLAGS_RELEASE " -flto")
+    string(APPEND CMAKE_CXX_FLAGS_RELWITHDEBINFO " -flto")
+    string(APPEND CMAKE_CXX_FLAGS_MINSIZEREL " -flto")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " -flto")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO " -flto")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS_MINSIZEREL " -flto")
 endif()
 
 if(MSVC)
