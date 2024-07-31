@@ -17,18 +17,37 @@
 namespace rana {
 namespace gfx {
 
+uint32_t create_fallback_texture()
+{
+    static constexpr auto size = 64;
+    uint32_t data[size][size];
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            data[x][y] = ((x / (size/2)) != (y / (size/2))) ? 0xFFFF00FF : 0xFF000000;
+        }
+    }
+
+    uint32_t tex; 
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    return tex;
+}
+
 uint32_t load_texture(const char *fn)
 {
     std::vector<uint8_t> file;
     if (!fs::readfile(file, fn)) {
-        return 0;
+        return create_fallback_texture();
     }
 
     int w, h, ch;
     auto *data = stbi_load_from_memory(file.data(), file.size(), &w, &h, &ch, 4);
     if (!data) {
         log::err("failed to load texture '%s': %s", fn, stbi_failure_reason());
-        return 0;
+        return create_fallback_texture();
     }
 
     uint32_t tex;
