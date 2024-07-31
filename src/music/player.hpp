@@ -519,6 +519,8 @@ class MusicPlayer {
     std::vector<Track> tracks;
     Track master;
 
+    float master_volume = 1.0f;
+
     void recalculateSamplesTick()
     {
         samples_tick = sr / (bpm / 60.0 * float(lines_beat * ticks_line));
@@ -740,6 +742,10 @@ public:
         {
             ZoneScopedN("Master Track");
             master.process(samples.data(), samples.size());
+            for (auto &n : samples) {
+                n.l *= master_volume;
+                n.r *= master_volume;
+            }
         }
 
         return samples;
@@ -748,6 +754,7 @@ public:
     void setTicks(int ticks) { ticks_line = ticks; recalculateSamplesTick(); }
     void setLines(int lines) { lines_beat = lines; recalculateSamplesTick(); }
     void setBPM(int bpm) { this->bpm = bpm; recalculateSamplesTick(); log::info("bpm: %f", this->bpm); }
+    void setVolume(float volume) { master_volume = volume; }
 
     void drawMixer()
     {

@@ -7,6 +7,9 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
+#include <glm/mat4x4.hpp>
+#include <glm/ext.hpp>
+#include <tracy/Tracy.hpp>
 
 namespace rana {
 namespace gfx {
@@ -83,8 +86,11 @@ unsigned int create_vao(float *vertices, size_t sz_vertices, unsigned int *indic
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sz_vertices, vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     unsigned int ebo;
     glGenBuffers(1, &ebo);
@@ -93,9 +99,6 @@ unsigned int create_vao(float *vertices, size_t sz_vertices, unsigned int *indic
 
     return vao;
 }
-
-static unsigned int vao2;
-static unsigned int sh2;
 
 Context::Context(const char *title, int w, int h)
 {
@@ -131,43 +134,33 @@ Context::Context(const char *title, int w, int h)
 
     glViewport(0, 0, w, h);
 
+    uint32_t vbo;
     float vertices[] = {
-        -0.5f, -0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-        -0.5f,  0.5f, 0.0f,
-         0.5f,  0.5f, 0.0f,
+        // pos      // tex
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f
     };
+    glGenVertexArrays(1, &quad_vao);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindVertexArray(quad_vao);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
-    unsigned int indices[] = {
-        0, 1, 2,
-        1, 2, 3,
-    };
+    sprite_shader = load_shader_program("shaders/sprite.fs", "shaders/sprite.vs");
 
-    vao = create_vao(vertices, sizeof(vertices), indices, sizeof(indices));
-    for (int i = 0; i < 12; i++) {
-        vertices[i] += 0.25;
-    }
-    vao2 = create_vao(vertices, sizeof(vertices), indices, sizeof(indices));
-
-    shaderprog = load_shader_program("shaders/fs.glsl", "shaders/vs.glsl");
-    sh2 = load_shader_program("shaders/fs2.glsl", "shaders/vs.glsl");
-
-    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
-
-    ImFontConfig cfg;
-    cfg.PixelSnapH = true;
-    cfg.OversampleH = 1;
-    cfg.OversampleV = 1;
-    io.Fonts->AddFontFromFileTTF("monospace.ttf", 15.0f);
-
-    ImGuiStyle &style = ImGui::GetStyle();
-    style.AntiAliasedLinesUseTex = false;
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL3_InitForOpenGL(window, glcontext);
@@ -184,23 +177,71 @@ Context::~Context()
     SDL_DestroyWindow(window);
 }
 
-void Context::draw()
+void Context::drawBegin()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
     glClearColor(0.2f, 0.0f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+}
 
-    glUseProgram(shaderprog);
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-    glUseProgram(sh2);
-    glBindVertexArray(vao2);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
+void Context::drawFinish()
+{
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     SDL_GL_SwapWindow(window);
+}
+
+// fixme: replace this with something better..
+// seems very dumb to figure out the location by string everytime
+static void set_uniform(uint32_t shader, const char *name, glm::vec4 value)
+{
+    auto uniform = glGetUniformLocation(shader, name);
+    glUniform4f(uniform, value.x, value.y, value.z, value.w);
+}
+
+static void set_uniform(uint32_t shader, const char *name, glm::mat4 value)
+{
+    auto uniform = glGetUniformLocation(shader, name);
+    glUniformMatrix4fv(uniform, 1, GL_FALSE, glm::value_ptr(value));
+}
+
+static void set_uniform(uint32_t shader, const char *name, glm::vec2 value)
+{
+    auto uniform = glGetUniformLocation(shader, name);
+    glUniform2f(uniform, value.x, value.y);
+}
+
+using glm::vec2, glm::vec3, glm::vec4, glm::mat4; 
+
+void Context::drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float rotation, float alpha)
+{
+    ZoneScoped;
+
+    glUseProgram(sprite_shader);
+
+    auto model = mat4(1.0f);
+    model = glm::translate(model, vec3(pos, 0.0f));
+    model = glm::scale(model, vec3(size, 1.0f));
+
+    auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
+
+    set_uniform(sprite_shader, "model", model);
+    set_uniform(sprite_shader, "projection", projection);
+    set_uniform(sprite_shader, "sprite_color", glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBindVertexArray(quad_vao);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 }
 
 }

@@ -14,6 +14,7 @@ add_executable(rana WIN32
     src/main.cpp
     src/fs.cpp
     src/gfx.cpp
+    src/gfx_textures.cpp
     src/sdl_error.cpp
     src/audio/samples.cpp
     src/audio/freeverb/freeverb.c
@@ -72,6 +73,10 @@ target_include_directories(rana PRIVATE tracy/public)
 if(MSYS OR MINGW)
     target_link_libraries(rana ws2_32 dbghelp)
 endif()
+
+# glm
+add_subdirectory(glm glm)
+target_link_libraries(rana glm::glm)
 
 # others
 target_include_directories(rana PRIVATE src)

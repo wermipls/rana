@@ -1,6 +1,7 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
 #include "gfx.hpp"
+#include "gfx_textures.hpp"
 #include "audio/backend.hpp"
 #include "music/player.hpp"
 #include "serializer.hpp"
@@ -44,8 +45,12 @@ int main(int argc, char **argv)
     auto player = rana::audio::MusicPlayer(song, 44100);
     rana::audio::init(44100, audio_callback, &player);
 
+    auto tex = rana::gfx::load_texture("punch.png");
+
     bool running = true;
+    float time = 0;
     while (running) {
+        time = SDL_GetTicks() / 3000.0f;
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type)
@@ -57,15 +62,28 @@ int main(int argc, char **argv)
             ImGui_ImplSDL3_ProcessEvent(&e);
         }
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
+        ctx.drawBegin();
+
+        float x, y;
+        SDL_GetMouseState(&x, &y);
+
+        {
+            ZoneScopedN("Particles");
+            for (int i = 0; i < 512; i++) {
+                float a = i / 512.f;
+                auto b = a + 1.0f;
+                float size = (sin(time/10.f + a) + 0.1f) * 64.f;
+                ctx.drawSprite(tex, {640+cos(time*b*(time/7.0f+1.0f))*300.f+(a-.5f)*100.f,360+sin(time*3.0f*b)*200.0f+(a-.5f)*100.f}, {size,size}, 0, a * 0.1f);
+            }
+        }
+        ctx.drawSprite(tex, {x,y}, {256,256}, 0);
+        
 
         ImGui::ShowDemoWindow();
         player.drawMixer();
         player.drawPattern();
 
-        ctx.draw();
+        ctx.drawFinish();
         FrameMark;
     }
 
