@@ -529,12 +529,16 @@ class Biquad : public Effect {
     float params[paramCount] = {};
 
     float sr;
-    float a0, a1, a2, b0, b1, b2;
-    SampleStereo y1 = {0,0};
-    SampleStereo y2 = {0,0};
-    SampleStereo x1 = {0,0};
-    SampleStereo x2 = {0,0};
+public:
+    struct Coeffs {
+        float a0, a1, a2, b0, b1, b2;
+        SampleStereo y1 = {0,0};
+        SampleStereo y2 = {0,0};
+        SampleStereo x1 = {0,0};
+        SampleStereo x2 = {0,0};
+    } c;
     enum Mode : int {
+        None,
         Lowpass,
         Highpass,
         Bandpass,
@@ -549,7 +553,7 @@ class Biquad : public Effect {
     float q = 0.5;
     float gain_db = 0.0;
 
-    void recalculateCoeffs()
+    static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
     {
         float nf = 2.0f * pi * cutoff / (sr * 2.0f); // 2x oversample
         float fsin = sin(nf);
@@ -580,100 +584,107 @@ class Biquad : public Effect {
 
         switch (mode) {
             default:
+            case None:
+                coeff.a0 = 1.0;
+                coeff.a1 = 0.0;
+                coeff.a2 = 1.0;
+                coeff.b0 = 1.0;
+                coeff.b1 = 0.0;
+                coeff.b2 = 1.0;
             case Lowpass:
-                b1 = 1.0f - fcos;
-                b0 = b1 / 2.0f;
-                b2 = b0;
-                a0 = 1.0f + a;
-                a1 = -2.0f * fcos;
-                a2 = 1.0f - a;
+                coeff.b1 = 1.0f - fcos;
+                coeff.b0 = coeff.b1 / 2.0f;
+                coeff.b2 = coeff.b0;
+                coeff.a0 = 1.0f + a;
+                coeff.a1 = -2.0f * fcos;
+                coeff.a2 = 1.0f - a;
                 break;
             case Highpass:
-                b1 = -(1.0f + fcos);
-                b0 = -b1 / 2.0f;
-                b2 = b0;
-                a0 = 1.0f + a;
-                a1 = -2.0f * fcos;
-                a2 = 1.0f - a;
+                coeff.b1 = -(1.0f + fcos);
+                coeff.b0 = -coeff.b1 / 2.0f;
+                coeff.b2 = coeff.b0;
+                coeff.a0 = 1.0f + a;
+                coeff.a1 = -2.0f * fcos;
+                coeff.a2 = 1.0f - a;
                 break;
             case Bandpass: // FIXME
-                b0 = fsin / 2.0f;
-                b1 = 0;
-                b2 = -fsin / 2.0f;
-                a0 = 1.0f + a;
-                a1 = -2.0f * fcos;
-                a2 = 1.0f - a;
+                coeff.b0 = fsin / 2.0f;
+                coeff.b1 = 0;
+                coeff.b2 = -fsin / 2.0f;
+                coeff.a0 = 1.0f + a;
+                coeff.a1 = -2.0f * fcos;
+                coeff.a2 = 1.0f - a;
                 break;
             case FixedBandpass:
-                b0 = a;
-                b1 = 0;
-                b2 = -a;
-                a0 = 1.0f + a;
-                a1 = -2.0f * fcos;
-                a2 = 1.0f - a;
+                coeff.b0 = a;
+                coeff.b1 = 0;
+                coeff.b2 = -a;
+                coeff.a0 = 1.0f + a;
+                coeff.a1 = -2.0f * fcos;
+                coeff.a2 = 1.0f - a;
                 break;
             case Notch:
-                b0 = 1;
-                b1 = -2.0f * fcos;
-                b2 = 1;
-                a0 = 1.0f + a;
-                a1 = b1;
-                a2 = 1.0f - a;
+                coeff.b0 = 1;
+                coeff.b1 = -2.0f * fcos;
+                coeff.b2 = 1;
+                coeff.a0 = 1.0f + a;
+                coeff.a1 = coeff.b1;
+                coeff.a2 = 1.0f - a;
                 break;
             case Allpass:
-                b0 = 1.0f - a;
-                b1 = -2.0f * fcos;
-                b2 = 1.0f + a;
-                a0 = b2;
-                a1 = b1;
-                a2 = b0;
+                coeff.b0 = 1.0f - a;
+                coeff.b1 = -2.0f * fcos;
+                coeff.b2 = 1.0f + a;
+                coeff.a0 = coeff.b2;
+                coeff.a1 = coeff.b1;
+                coeff.a2 = coeff.b0;
                 break;
             case Peaking:
-                b0 = 1.0f + a * gain;
-                b1 = -2.0f * fcos;
-                b2 = 1.0f - a * gain;
-                a0 = 1.0f + a / gain;
-                a1 = b1;
-                a2 = 1.0f - a / gain;
+                coeff.b0 = 1.0f + a * gain;
+                coeff.b1 = -2.0f * fcos;
+                coeff.b2 = 1.0f - a * gain;
+                coeff.a0 = 1.0f + a / gain;
+                coeff.a1 = coeff.b1;
+                coeff.a2 = 1.0f - a / gain;
                 break;
             case LowShelf:
-                b0 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
-                b1 =  2.0f * gain * (gain - 1.0f - (gain + 1.0f) * fcos);
-                b2 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
-                a0 =                 gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
-                a1 =        -2.0f * (gain - 1.0f + (gain + 1.0f) * fcos);
-                a2 =                 gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
+                coeff.b0 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
+                coeff.b1 =  2.0f * gain * (gain - 1.0f - (gain + 1.0f) * fcos);
+                coeff.b2 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
+                coeff.a0 =                 gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
+                coeff.a1 =        -2.0f * (gain - 1.0f + (gain + 1.0f) * fcos);
+                coeff.a2 =                 gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
                 break;
             case HighShelf:
-                b0 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
-                b1 = -2.0f * gain * (gain - 1.0f + (gain + 1.0f) * fcos);
-                b2 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
-                a0 =                 gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
-                a1 =         2.0f * (gain - 1.0f - (gain + 1.0f) * fcos);
-                a2 =                 gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
+                coeff.b0 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
+                coeff.b1 = -2.0f * gain * (gain - 1.0f + (gain + 1.0f) * fcos);
+                coeff.b2 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
+                coeff.a0 =                 gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
+                coeff.a1 =         2.0f * (gain - 1.0f - (gain + 1.0f) * fcos);
+                coeff.a2 =                 gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
                 break;
         }
 
         // important: we invert a0 so we can do filter processing without divisions
-        a0 = 1.0f / a0;
+        coeff.a0 = 1.0f / coeff.a0;
 
         // final failsafe
         // just to be safe and avoid poisoning processing loop
-        if (isnan(a0) || isnan(a1) || isnan(a2) || isnan(b0) || isnan(b1) || isnan(b2)) {
-            a0 = 1.0;
-            a1 = 0.0;
-            a2 = 1.0;
-            b0 = 1.0;
-            b1 = 0.0;
-            b2 = 1.0;
+        if (isnan(coeff.a0) || isnan(coeff.a1) || isnan(coeff.a2)
+         || isnan(coeff.b0) || isnan(coeff.b1) || isnan(coeff.b2)) {
+            coeff.a0 = 1.0;
+            coeff.a1 = 0.0;
+            coeff.a2 = 1.0;
+            coeff.b0 = 1.0;
+            coeff.b1 = 0.0;
+            coeff.b2 = 1.0;
         }
     }
 
-public:
     Biquad(Hz sample_rate = 44100)
     {
         sr = sample_rate;
-        recalculateCoeffs();
+        recalculateCoeffs(c, sr, mode, cutoff, q, gain_db);
     }
 
     virtual const char *getName() { return "Biquad"; }
@@ -693,7 +704,7 @@ public:
             case 3: gain_db = -24.0f + value * 48.0f; break;
         }
 
-        recalculateCoeffs();
+        recalculateCoeffs(c, sr, mode, cutoff, q, gain_db);
     }
 
     virtual void process(SampleStereo *in, size_t n)
@@ -703,21 +714,21 @@ public:
             SampleStereo y;
             const auto x = in[i];
             // pass 1
-            y.l = (b0 * x.l + b1 * x1.l + b2 * x2.l - a1 * y1.l - a2 * y2.l) * a0;
-            y.r = (b0 * x.r + b1 * x1.r + b2 * x2.r - a1 * y1.r - a2 * y2.r) * a0;
-            y2 = y1;
-            y1 = y;
-            x2 = x1;
-            x1 = in[i];
+            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) * c.a0;
+            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) * c.a0;
+            c.y2 = c.y1;
+            c.y1 = y;
+            c.x2 = c.x1;
+            c.x1 = in[i];
             // pass 2
-            y.l = (b0 * x.l + b1 * x1.l + b2 * x2.l - a1 * y1.l - a2 * y2.l) * a0;
-            y.r = (b0 * x.r + b1 * x1.r + b2 * x2.r - a1 * y1.r - a2 * y2.r) * a0;
-            y2 = y1;
-            y1 = y;
-            x2 = x1;
-            x1 = in[i];
-            in[i].l = (y.l + y1.l) * 0.5f;
-            in[i].r = (y.r + y1.r) * 0.5f;
+            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) * c.a0;
+            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) * c.a0;
+            c.y2 = c.y1;
+            c.y1 = y;
+            c.x2 = c.x1;
+            c.x1 = in[i];
+            in[i].l = (y.l + c.y1.l) * 0.5f;
+            in[i].r = (y.r + c.y1.r) * 0.5f;
         }
     }
 };
