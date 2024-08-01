@@ -177,14 +177,17 @@ Context::~Context()
     SDL_DestroyWindow(window);
 }
 
+void Context::clear(glm::vec3 color)
+{
+    glClearColor(color.r, color.g, color.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
 void Context::drawBegin()
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
-
-    glClearColor(0.2f, 0.0f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void Context::drawFinish()

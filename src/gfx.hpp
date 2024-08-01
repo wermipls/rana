@@ -3,6 +3,7 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_render.h>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 namespace rana {
 namespace gfx {
@@ -15,6 +16,7 @@ public:
     void drawBegin();
     void drawFinish();
 
+    void clear(glm::vec3 color);
     void drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float rotation, float alpha = 1.0f);
 private:
     SDL_Window *window;
