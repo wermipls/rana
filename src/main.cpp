@@ -251,6 +251,7 @@ int main(int argc, char **argv)
                     enumerated_gamepads = {};
                     current_gamepad = nullptr;
                 }
+                break;
             }
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
                 if (!current_gamepad) {
