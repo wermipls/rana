@@ -12,6 +12,7 @@
 #include <tracy/Tracy.hpp>
 #include <glm/vec4.hpp>
 #include <glm/ext.hpp>
+#include "input.hpp"
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
 {
@@ -25,6 +26,12 @@ void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additio
     }
     FrameMarkEnd("Audio processing");
 }
+
+enum Inputs : int {
+    Left,
+    Right,
+    Jump,
+};
 
 float axis(float p1, float s1, float p2, float s2)
 {
@@ -77,18 +84,17 @@ struct Player {
     float gravity = 0.1f;
     bool grounded = false;
 
-    void doTick()
+    void doTick(rana::input::Mapper &input)
     {
-        auto kbstate = SDL_GetKeyboardState(nullptr);
-        if (kbstate[SDL_SCANCODE_RIGHT]) {
+        if (input.held(Inputs::Right)) {
             speed.x = std::min(speed.x += 0.4f, 3.5f);
-        } else if (kbstate[SDL_SCANCODE_LEFT]) {
+        } else if (input.held(Inputs::Left)) {
             speed.x = std::max(speed.x -= 0.4f, -3.5f);
         } else {
             speed.x = speed.x * (grounded ? 0.2f : 0.99f);
         }
 
-        if (grounded && kbstate[SDL_SCANCODE_Z]) {
+        if (grounded && input.pressed(Inputs::Jump)) {
             speed.y = -6.f;
         }
         grounded = false;
@@ -118,7 +124,49 @@ struct Player {
             speed.x = 0;
         }
     }
+
+    void debugWindow()
+    {
+        if (ImGui::Begin("Player")) {
+            ImGui::Text("pos: %6.3f %6.3f", pos.x, pos.y);
+            ImGui::Text("spd: %6.3f %6.3f", speed.x, speed.y);
+            ImGui::Text("grounded: %d", grounded);
+
+            ImGui::SliderFloat2("spd", (float*)&speed, -10, 10);
+        }
+        ImGui::End();
+    }
 };
+
+void synchronize_fps(double target_ticks_frame)
+{
+    static uint64_t ticks_next = 0;
+    static double error = 0;
+    int ticks_frame_flr = std::floor(target_ticks_frame);
+    auto ticks = SDL_GetTicks();
+
+    if (ticks_next < ticks - ticks_frame_flr - 1) {
+        ticks_next = ticks;
+        return;
+    }
+
+    if (ticks_next > ticks) {
+        int delay = ticks_next - ticks;
+        SDL_Delay(delay);
+    }
+
+    error += target_ticks_frame - (double)ticks_frame_flr;
+    ticks_next += ticks_frame_flr;
+    if (error >= 1) {
+        error -= 1;
+        ticks_next += 1;
+    }
+}
+
+void enumerate_controllers()
+{
+    SDL_Init(SDL_INIT_GAMEPAD);
+}
 
 int main(int argc, char **argv)
 {
@@ -143,6 +191,15 @@ int main(int argc, char **argv)
 
     auto brick = rana::gfx::load_texture("brik.png");
     auto chara = rana::gfx::load_texture("chara.png");
+
+    enumerate_controllers();
+    auto input = rana::input::Mapper();
+    input.addMapping(Inputs::Left,  rana::input::JoyInput::LStickLeft,  SDL_SCANCODE_LEFT);
+    input.addMapping(Inputs::Right, rana::input::JoyInput::LStickRight, SDL_SCANCODE_RIGHT);
+    input.addMapping(Inputs::Jump,  rana::input::JoyInput::South,       SDL_SCANCODE_Z);
+    std::vector<SDL_Gamepad *> enumerated_gamepads;
+    enumerated_gamepads.reserve(16);
+    SDL_Gamepad *current_gamepad = nullptr;
 
     uint8_t map[24*16] = {
         0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -171,17 +228,47 @@ int main(int argc, char **argv)
     plr.pos = {440, 100};
 
     bool running = true;
-    float time = 0;
-    int ticks_done = SDL_GetTicks() / 1000.0f * 120;
-    int ticks_target;
 
     while (running) {
-        time = SDL_GetTicks() / 1000.0f;
-        ticks_target = time * 120;
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type)
             {
+            case SDL_EVENT_GAMEPAD_ADDED: {
+                auto gde = (SDL_GamepadDeviceEvent *)&e;
+                rana::log::info("gamepad connected: %s", SDL_GetGamepadNameForID(gde->which));
+                auto gamepad = SDL_OpenGamepad(gde->which);
+                if (gamepad) {
+                    enumerated_gamepads.push_back(gamepad);
+                }
+                break;
+            }
+            case SDL_EVENT_GAMEPAD_REMOVED: {
+                auto gde = (SDL_GamepadDeviceEvent *)&e;
+                if (SDL_GetGamepadFromID(gde->which) == current_gamepad) {
+                    rana::log::info("lost current gamepad :(");
+                    SDL_CloseGamepad(current_gamepad);
+                    enumerated_gamepads = {};
+                    current_gamepad = nullptr;
+                }
+            }
+            case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+                if (!current_gamepad) {
+                    auto gde = (SDL_GamepadDeviceEvent *)&e;
+                    auto gamepad = SDL_GetGamepadFromID(gde->which);
+                    if (!SDL_GamepadConnected(gamepad)) {
+                        break;
+                    }
+                    rana::log::info("setting gamepad to current");
+                    current_gamepad = gamepad;
+                    for (auto n : enumerated_gamepads) {
+                        if (n != current_gamepad) {
+                            SDL_CloseGamepad(n);
+                        }
+                    }
+                    enumerated_gamepads = {current_gamepad};
+                }
+                break;
             case SDL_EVENT_QUIT:
                 running = false;
             }
@@ -192,13 +279,9 @@ int main(int argc, char **argv)
         ctx.drawBegin();
         ctx.clear({0.7, 0.5, 0.6});
 
-        float x, y;
-        SDL_GetMouseState(&x, &y);
+        input.update(current_gamepad);
+        plr.doTick(input);
 
-        if (ticks_done < ticks_target) {
-            ticks_done++;
-            plr.doTick();
-        }
         for (int x = 0; x < 24; x++) {
             for (int y = 0; y < 16; y++) {
                 if (!map[y * 24 + x]) continue;
@@ -208,13 +291,15 @@ int main(int argc, char **argv)
                 plr.test(pos, size);
             }
         }
-        ctx.drawSprite(chara, plr.pos-plr.size/2.0f, plr.size, 0, 1.0f);
-
+        ctx.drawSprite(chara, glm::floor(plr.pos-plr.size/2.0f), plr.size, 0, 1.0f);
+        plr.debugWindow();
         //ImGui::ShowDemoWindow();
         //player.drawMixer();
         //player.drawPattern();
 
         ctx.drawFinish();
+
+        synchronize_fps(1000.0 / 120.0);
         FrameMark;
     }
 
