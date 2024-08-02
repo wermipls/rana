@@ -591,6 +591,7 @@ public:
                 coeff.b0 = 1.0;
                 coeff.b1 = 0.0;
                 coeff.b2 = 1.0;
+                break;
             case Lowpass:
                 coeff.b1 = 1.0f - fcos;
                 coeff.b0 = coeff.b1 / 2.0f;
