@@ -6,12 +6,14 @@
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
 #include <opus.h>
+#include <tracy/Tracy.hpp>
 
 namespace rana {
 namespace audio {
 
 std::shared_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
 {
+    ZoneScoped;
     auto df = drflac_open_memory(s.data(), s.size(), NULL);
     auto frames = df->totalPCMFrameCount;
     auto channels = df->channels;
@@ -46,6 +48,7 @@ std::shared_ptr<DecodedSample> decode_flac(std::vector<uint8_t> s)
 
 std::shared_ptr<DecodedSample> decode_opus(std::vector<uint8_t> s)
 {
+    ZoneScoped;
     int error;
     auto st = opus_decoder_create(48000, 2, &error);
     if (error != OPUS_OK) {
