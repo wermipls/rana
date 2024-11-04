@@ -13,6 +13,7 @@
 #include <glm/vec4.hpp>
 #include <glm/ext.hpp>
 #include "input.hpp"
+#include "audio/audio.hpp"
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
 {
@@ -24,6 +25,20 @@ void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additio
         SDL_PutAudioStreamData(stream, samples.data(), bytes);
         additional_amount -= bytes;
     }
+    FrameMarkEnd("Audio processing");
+}
+
+void SDLCALL audio_callback_new(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+{
+    using namespace rana::audio;
+
+    FrameMarkStart("Audio processing");
+    auto audio = (rana::audio::Context *)userdata;
+    std::vector<SampleStereo> buf((additional_amount+7) / 8);
+
+    audio->process(buf.data(), buf.size());
+    SDL_PutAudioStreamData(stream, buf.data(), buf.size() * 8);
+
     FrameMarkEnd("Audio processing");
 }
 
@@ -186,8 +201,15 @@ int main(int argc, char **argv)
     auto songser = rana::Serializer(mus);
     song.serialize(songser);
 
+    auto jump_sfx_file = std::vector<uint8_t>();
+    if (!rana::fs::readfile(jump_sfx_file, "jump.flac")) {
+        return -1;
+    }
+    auto jump_sfx = rana::audio::decode_flac(jump_sfx_file);
+    auto audio = rana::audio::Context(44100);
+
     auto player = rana::audio::MusicPlayer(song, 44100);
-    rana::audio::init(44100, audio_callback, &player);
+    rana::audio::init(44100, audio_callback_new, &audio);
 
     auto brick = rana::gfx::load_texture("brik.png");
     auto chara = rana::gfx::load_texture("chara.png");
@@ -294,9 +316,13 @@ int main(int argc, char **argv)
         }
         ctx.drawSprite(chara, glm::floor(plr.pos-plr.size/2.0f), plr.size, 0, 1.0f);
         plr.debugWindow();
-        //ImGui::ShowDemoWindow();
-        //player.drawMixer();
-        //player.drawPattern();
+        ImGui::ShowDemoWindow();
+        player.drawMixer();
+        player.drawPattern();
+
+        if (input.pressed(Inputs::Jump)) {
+            audio.setVolume(audio.playSample(jump_sfx.get()), 0.1);
+        }
 
         ctx.drawFinish();
 
