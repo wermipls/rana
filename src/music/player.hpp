@@ -351,6 +351,9 @@ public:
                 prev = smp;
             }
 
+            // fyi: this "magical constant" is actually a C4 note. self-explanatory, huh?
+            // this was a very interesting piece of code to see after 5 months.
+            // need to replace it with a constexpr but too sleepy atm
             t += pitch_actual * vibrato_current * arp_current * sample.transpose_fine / 261.6255f; //FIXME
             while (t > 1.f) {
                 t -= 1.f;
