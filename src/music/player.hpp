@@ -303,7 +303,7 @@ public:
         sample.loop_end      = s.loop_end;
         sample.interpolation = s.interpolation;
 
-        sample.transpose_fine = intervalFromSemi((double)s.transpose + (double)s.fine / 127);
+        sample.transpose_fine = intervalFromSemi((double)s.transpose + (double)s.fine / 128);
         sample.transpose_fine *= (smp->rate / sr);
 
         adsr = ins.adsr_volume;
