@@ -565,12 +565,18 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
     auto patterns = rnsong.child("PatternPool").child("Patterns").children("Pattern");
     std::vector<int> track_offsets;
 
+    struct LastFXValue {
+        uint8_t Vxx, Uxx, Dxx, Gxx, Axx, Oxx, Ixx;
+    };
+
     track_offsets.push_back(0);
     int columns_total = 0;
     for (auto &t : song.mixer.tracks) {
         columns_total += t.columns;
         track_offsets.push_back(columns_total);
     }
+
+    std::vector<LastFXValue> last_fx(columns_total);
 
     for (auto &pattern : patterns) {
         musfmt::Pattern p{};
@@ -624,32 +630,53 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
 
                     if (fxnum == "0A") {
                         cmd.type = FxArp;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Axx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0V") {
                         cmd.type = FxVibrato;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Vxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0G") {
                         cmd.type = FxGlide;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Gxx;
+                        if (v) { last = v; rana::log::info("g%02x", v); } else { v = last; rana::log::info("g00 -> g%02x", v); }
+                        cmd.param_xy = v;
                         make_legato(cell);
                         cell.push_back(cmd);
                     } else if (fxnum == "0D") {
                         cmd.type = FxSlideDown;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Dxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0U") {
                         cmd.type = FxSlideUp;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Uxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0O") {
                         cmd.type = FxFadeout;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Oxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0I") {
                         cmd.type = FxFadein;
-                        cmd.param_xy = val_hex(nc, "EffectValue", 0);
+                        auto v = val_hex(nc, "EffectValue", 0);
+                        auto &last = last_fx[col_i].Ixx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         cell.push_back(cmd);
                     } else if (fxnum == "0S") {
                         cmd.type = FxOffset;
@@ -673,28 +700,51 @@ void parse_patterns(pugi::xml_node &rnsong, musfmt::Song &song)
                     bool is_track_scope = false;
                     bool turn_legato = false;
 
+                    // fwiw: i know this thing is gonna be buggy when mixing note/track effects
+                    // but realistically, those cases should never occur in normal songs...
                     if (fxnum == "0A") {
                         cmd.type = FxArp;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Axx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0V") {
                         cmd.type = FxVibrato;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Vxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0G") {
                         cmd.type = FxGlide;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Gxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                         turn_legato = true;
                     } else if (fxnum == "0D") {
                         cmd.type = FxSlideDown;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Dxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0U") {
                         cmd.type = FxSlideUp;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Uxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0O") {
                         cmd.type = FxFadeout;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Oxx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0I") {
                         cmd.type = FxFadein;
-                        cmd.param_xy = val_hex(ec, "Value", 0);
+                        auto v = val_hex(ec, "Value", 0);
+                        auto &last = last_fx[col_i].Ixx;
+                        if (v) { last = v; } else { v = last; }
+                        cmd.param_xy = v;
                     } else if (fxnum == "0S") {
                         cmd.type = FxOffset;
                         cmd.param_xy = val_hex(ec, "Value", 0);
