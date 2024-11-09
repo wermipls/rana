@@ -9,6 +9,7 @@
 #include <regex>
 #include <cmath>
 #include <map>
+#include <unordered_map>
 #include <opus.h>
 #include "dr_flac.h"
 
@@ -392,28 +393,24 @@ void parse_instruments(pugi::xml_node &rnsong, musfmt::Song &song)
 
 void parse_effects(pugi::xml_node &devices, std::vector<musfmt::Effect> &effects)
 {
+    using enum musfmt::EffectType;
+    static const std::unordered_map<std::string, musfmt::EffectType> effect_types = {
+        {"ranaReverb", Reverb},
+        {"ranaDelay", Delay},
+        {"ranaLowpass", Lowpass},
+        {"ranaHighpass", Highpass},
+        {"ranaDistortion", Distortion},
+        {"ranaBitcrush", Bitcrush},
+        {"ranaCompressor", Compressor},
+        {"ranaGalactic", Galactic},
+        {"ranaBiquad", Biquad},
+    };
+
     for (auto &n : devices.children("AudioPluginDevice")) {
         struct musfmt::Effect fx;
         auto pid = val(n, "PluginIdentifier");
-        using enum musfmt::EffectType;
-        if (pid == "ranaReverb") {
-            fx.type = Reverb;
-        } else if (pid == "ranaDelay") {
-            fx.type = Delay;
-        } else if (pid == "ranaLowpass") {
-            fx.type = Lowpass;
-        } else if (pid == "ranaHighpass") {
-            fx.type = Highpass;
-        } else if (pid == "ranaDistortion") {
-            fx.type = Distortion;
-        } else if (pid == "ranaBitcrush") {
-            fx.type = Bitcrush;
-        } else if (pid == "ranaCompressor") {
-            fx.type = Compressor;
-        } else if (pid == "ranaGalactic") {
-            fx.type = Galactic;
-        } else if (pid == "ranaBiquad") {
-            fx.type = Biquad;
+        if (auto i = effect_types.find(pid); i != effect_types.end()) {
+            fx.type = i->second;
         } else {
             log::warn("ignoring unsupported plugin %s", pid.c_str());
             continue;
