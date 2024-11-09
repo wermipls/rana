@@ -771,8 +771,7 @@ public:
 
             ImGui::Text("%s", t.name.c_str());
             float db = 20 * std::log10(t.volume);
-            ImGui::VSliderFloat("##v", ImVec2(80, 160), &db, -30.0f, 6.0f, "%.1f dB");
-            if (db <= -30.0f) {
+            if (ImGui::VSliderFloat("##v", ImVec2(80, 160), &db, -30.0f, 6.0f, "%.1f dB") && db <= -30.0f) {
                 t.volume = 0;
             } else {
                 t.volume = from_dB(db);
