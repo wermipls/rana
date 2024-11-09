@@ -1,3 +1,5 @@
+#define RANA_CORN
+
 #include "serializer.hpp"
 #include "log.hpp"
 #include "music/format.hpp"
@@ -216,7 +218,7 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
 
     const mz_uint filecount = mz_zip_reader_get_num_files(zip);
     mz_zip_archive_file_stat stat;
-    std::regex re("^SampleData\\/Instrument(\\d+).*\\/Sample(\\d+) \\((.+)\\)\\.(.+)$");
+    std::regex re("^SampleData\\/Instrument(\\d+) \\((.+)\\)\\/Sample(\\d+) \\((.+)\\)\\.(.+)$");
 
     for (mz_uint i = 0; i < filecount; i++) {
         if (!mz_zip_reader_file_stat(zip, i, &stat)) {
@@ -231,9 +233,10 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
 
         if (std::regex_match(fname, match, re)) {
             auto ins_i = std::stoul(match[1].str());
-            auto smp_i = std::stoul(match[2].str());
-            auto name = match[3].str();
-            auto ext = match[4].str();
+            auto ins_name = match[2].str();
+            auto smp_i = std::stoul(match[3].str());
+            auto name = match[4].str();
+            auto ext = match[5].str();
 
             if (smp_i >= song.ins[ins_i].smp.size()) {
                 continue;
@@ -268,11 +271,53 @@ void find_sample_data(mz_zip_archive *zip, musfmt::Song &song)
             if (reencode_opus) {
                 encode_sample_opus(sd, reencode_opus * 1000);
             }
+
+            char buf[128];
+            snprintf(buf, sizeof(buf)-1, "%02d.%02d %s", ins_i, smp_i, ins_name.c_str());
+            sd.name = std::string(buf);
+
             sample_data.push_back(sd);
         }
     }
 
     song.sampledata = sample_data;
+}
+
+void print_samples_by_size(std::vector<musfmt::SampleData> &samples)
+{
+    auto sorted = std::vector<std::pair<size_t, musfmt::SampleData*>>();
+    size_t total_size = 0;
+    for (auto &n : samples) {
+        sorted.push_back({n.data.size(), &n});
+        total_size += n.data.size();
+    }
+
+    std::sort(sorted.begin(), sorted.end(), [](auto &left, auto &right) {
+        return left.first > right.first;
+    });
+
+    rana::log::info("\n%d samples, total %d KB", sorted.size(), total_size / 1000);
+    rana::log::info("%-40s %-10s %9s  %4s", "name", "codec", "bitrate", "size");
+    rana::log::info("====================================================================");
+
+    using enum musfmt::Codec;
+    for (auto n : sorted) {
+        auto s = n.second;
+        auto codec = (s->codec == FLAC) ? "FLAC" : "Opus";
+        if (s->codec == FLAC) {
+            auto df = drflac_open_memory(s->data.data(), s->data.size(), NULL);
+            s->length = df->totalPCMFrameCount;
+            s->sr = df->sampleRate;
+            drflac_close(df);
+        }
+        auto length_seconds = (double)s->length / (double)s->sr;
+        int kbps = s->data.size() / length_seconds / 125;
+        auto sz = s->data.size() / 1000;
+        s->name.resize(40);
+        rana::log::info("%-40s %-10s %4dkbps  %5dKB", s->name.c_str(), codec, kbps, sz);
+    }
+
+    rana::log::info("");
 }
 
 musfmt::Sample parse_sample(pugi::xml_node &smp)
@@ -905,6 +950,8 @@ int main(int argc, char **argv)
     song.mixer = parse_mixer(rnsong);
     parse_patterns(rnsong, song);
     parse_sequence(rnsong, song);
+
+    print_samples_by_size(song.sampledata);
 
     auto ser = Serializer();
     song.serialize(ser);

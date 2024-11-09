@@ -39,6 +39,9 @@ struct SampleData : public Serializable {
     uint16_t start_offset = 0;
 
     std::vector<uint8_t> data;
+#ifdef RANA_CORN
+    std::string name;
+#endif
 
     virtual void serialize(Serializer &s)
     {
