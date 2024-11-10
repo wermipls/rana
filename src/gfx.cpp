@@ -10,6 +10,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/ext.hpp>
 #include <tracy/Tracy.hpp>
+#include <stdexcept>
 
 namespace rana {
 namespace gfx {
@@ -117,19 +118,16 @@ Context::Context(const char *title, int w, int h)
     );
 
     if (!window) {
-        sdl_error("failed to create window");
-        throw;
+        throw std::runtime_error("failed to create window");
     }
 
     glcontext = SDL_GL_CreateContext(window);
     if (!glcontext) {
-        sdl_error("failed to create gl context");
-        throw;
+        throw std::runtime_error("failed to create gl context");
     }
 
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        log::err("failed to initialize glad");
-        throw;
+        throw std::runtime_error("failed to initialize glad");
     }
 
     glViewport(0, 0, w, h);
