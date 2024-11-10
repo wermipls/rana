@@ -10,6 +10,8 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(BUILD_SHARED_LIBS OFF)
 
+include(ExternalProject)
+
 add_executable(rana WIN32
     src/main.cpp
     src/fs.cpp
@@ -79,6 +81,38 @@ endif()
 add_subdirectory(glm glm)
 target_link_libraries(rana glm::glm)
 
+# LuaJIT
+# this works... with gcc only
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GCC")
+    # Copy LuaJIT source to binary dir. LuaJIT builds in-source,
+    # and we don't want to modify the original source tree, so
+    # we copy it.
+    file(COPY LuaJIT DESTINATION ${CMAKE_BINARY_DIR}/libs)
+
+    ExternalProject_Add(luajit
+        SOURCE_DIR "${CMAKE_BINARY_DIR}/libs/LuaJIT"
+        BUILD_IN_SOURCE true
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND "make"
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit-5.1.dll.a"
+    )
+    add_library(LuaJIT INTERFACE)
+    add_dependencies(LuaJIT luajit)
+    target_include_directories(LuaJIT INTERFACE LuaJIT/src)
+    target_link_libraries(LuaJIT INTERFACE "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit-5.1.dll.a")
+
+    target_include_directories(rana PRIVATE LuaJIT)
+    target_link_libraries(rana LuaJIT)
+else()
+    find_package(PkgConfig REQUIRED)
+
+    pkg_check_modules(LUA REQUIRED luajit)
+    target_link_libraries(rana ${LUA_LIBRARIES})
+    target_include_directories(rana PUBLIC ${LUA_INCLUDE_DIRS})
+    target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
+endif()
+
 # others
 target_include_directories(rana PRIVATE src)
 target_include_directories(rana PRIVATE external)
@@ -93,6 +127,9 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
 
 target_link_libraries(rana -static-libgcc -static-libstdc++ -fdiagnostics-color=always)
 target_compile_options(rana PRIVATE -ggdb -fdiagnostics-color=always)
+if(WIN32)
+    target_link_libraries(rana -static)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_libraries(rana -fansi-escape-codes -fuse-ld=lld -g -Wl,/debug,--pdb=)
