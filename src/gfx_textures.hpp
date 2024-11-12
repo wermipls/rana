@@ -5,7 +5,7 @@ namespace rana {
 namespace gfx {
 
 uint32_t load_texture(const char *fn);
-void destroy_texture(void *tex);
+void destroy_texture(uint32_t tex);
 
 }
 }
