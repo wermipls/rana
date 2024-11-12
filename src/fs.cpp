@@ -57,5 +57,10 @@ size_t writefile(std::vector<uint8_t> &buffer, const char *fn)
     return bytes;
 }
 
+bool exists(const char *fn)
+{
+    return PHYSFS_exists(fn);
+}
+
 }
 }
