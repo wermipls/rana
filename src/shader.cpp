@@ -44,12 +44,12 @@ void main()
 // FIXME: code duplication
 static auto load_shader(const char *fn, ShaderType type) -> expected<uint32_t, err>
 {
-    auto id = glCreateShader(type);
-
     std::vector<uint8_t> source;
     if (!fs::readfile(source, fn)) {
         return unexpected("failed to load shader file");
     }
+
+    auto id = glCreateShader(type);
 
     auto src = (char *)source.data();
     int src_size = source.size();
