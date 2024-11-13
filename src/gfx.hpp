@@ -4,11 +4,17 @@
 #include <SDL3/SDL_render.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include "shader.hpp"
 
 namespace rana {
 namespace gfx {
 
 class Context {
+    SDL_Window *window;
+    SDL_GLContext glcontext;
+    Shader sprite_shader;
+    uint32_t quad_vao;
+
 public:
     Context(const char *title = "rana", int w = 1280, int h = 720);
     ~Context();
@@ -18,10 +24,6 @@ public:
 
     void clear(glm::vec3 color);
     void drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float rotation, float alpha = 1.0f);
-private:
-    SDL_Window *window;
-    SDL_GLContext glcontext;
-    uint32_t sprite_shader, quad_vao;
 };
 
 }

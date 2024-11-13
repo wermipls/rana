@@ -17,6 +17,7 @@ add_executable(rana WIN32
     src/fs.cpp
     src/gfx.cpp
     src/gfx_textures.cpp
+    src/shader.cpp
     src/input.cpp
     src/sdl_error.cpp
     src/audio/samples.cpp
