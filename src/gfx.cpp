@@ -129,6 +129,11 @@ void Context::drawBegin()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+
+    sprite_shader.use();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Context::drawFinish()
@@ -145,8 +150,6 @@ void Context::drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float 
 {
     ZoneScoped;
 
-    sprite_shader.use();
-
     auto model = mat4(1.0f);
     model = glm::translate(model, vec3(pos, 0.0f));
     model = glm::scale(model, vec3(size, 1.0f));
@@ -158,12 +161,8 @@ void Context::drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     glBindVertexArray(quad_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
 }
 
 }
