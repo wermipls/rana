@@ -142,6 +142,7 @@ void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color
     auto model = mat4(1.0f);
     model = glm::translate(model, vec3(pos, 0.0f));
     model = glm::scale(model, vec3(tex.size() * scale, 1.0f));
+    model = glm::rotate(model, r, {0,0,1});
 
     auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
 
