@@ -62,9 +62,8 @@ static auto load_shader(const char *fn, ShaderType type) -> expected<uint32_t, e
     if (!success) {
         char info[512];
         glGetShaderInfoLog(id, sizeof(info), nullptr, info);
-        log::err("failed to compile shader '%s':\n%s", fn, info);
         glDeleteShader(id);
-        return unexpected("failed to compile shader");
+        return unexpected(err("failed to compile shader:\n") + info);
     }
 
     return id;
@@ -84,7 +83,6 @@ static auto load_shader_string(const char *shader, ShaderType type) -> expected<
         char info[512];
         glGetShaderInfoLog(id, sizeof(info), nullptr, info);
         glDeleteShader(id);
-        log::err("failed to compile shader string:\n%s", info); // FIXME: ?
         return unexpected(err("failed to compile shader:\n") + info);
     }
 
@@ -106,7 +104,6 @@ static auto load_shader_program(uint32_t vs, uint32_t fs) -> expected<uint32_t, 
         char info[512];
         glGetProgramInfoLog(shaderprog, sizeof(info), nullptr, info);
         glDeleteProgram(shaderprog);
-        log::err("failed to link shader program:\n%s", info); // FIXME: ?
         return unexpected(err("failed to link shader program: ") + info);
     }
 
