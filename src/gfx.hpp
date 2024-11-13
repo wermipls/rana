@@ -36,6 +36,8 @@ class Context {
     uint32_t vbo;
     DrawBatch batch;
 
+    void flush();
+
 public:
     Context(const char *title = "rana", int w = 1280, int h = 720);
     ~Context();

@@ -135,9 +135,36 @@ void Context::drawFinish()
 
 using glm::vec2, glm::vec3, glm::vec4, glm::mat4;
 
+void Context::flush()
+{
+    if (batch.vtxbuf.size() == 0) {
+        return;
+    }
+
+    auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
+    sprite_shader.setUniform("Projection", projection);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, batch.texture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, batch.vtxbuf.size() * sizeof(DrawBatch::Vert), batch.vtxbuf.data(), GL_STREAM_DRAW);
+
+    glBindVertexArray(quad_vao);
+    glDrawArrays(GL_TRIANGLES, 0, batch.vtxbuf.size());
+
+    batch.vtxbuf.resize(0);
+}
+
 void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color)
 {
     ZoneScoped;
+
+    auto t = tex.texture();
+    if (batch.texture != t) {
+        flush();
+        batch.texture = t;
+    }
 
     auto model = mat4(1.0f);
     model = glm::translate(model, vec3(pos, 0.0f));
@@ -148,23 +175,13 @@ void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color
 
     sprite_shader.setUniform("Projection", projection);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex.texture());
-
-    DrawBatch::Vert quad[6] = {
-        { model * vec4{0,1,0,1}, {0,1}, color },
-        { model * vec4{1,0,0,1}, {1,0}, color },
-        { model * vec4{0,0,0,1}, {0,0}, color },
-        { model * vec4{0,1,0,1}, {0,1}, color },
-        { model * vec4{1,1,0,1}, {1,1}, color },
-        { model * vec4{1,0,0,1}, {1,0}, color },
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STREAM_DRAW);
-
-    glBindVertexArray(quad_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    auto &buf = batch.vtxbuf;
+    buf.push_back({ model * vec4{0,1,0,1}, {0,1}, color });
+    buf.push_back({ model * vec4{1,0,0,1}, {1,0}, color });
+    buf.push_back({ model * vec4{0,0,0,1}, {0,0}, color });
+    buf.push_back({ model * vec4{0,1,0,1}, {0,1}, color });
+    buf.push_back({ model * vec4{1,1,0,1}, {1,1}, color });
+    buf.push_back({ model * vec4{1,0,0,1}, {1,0}, color });
 }
 
 }
