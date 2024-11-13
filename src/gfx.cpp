@@ -144,22 +144,23 @@ void Context::drawFinish()
     SDL_GL_SwapWindow(window);
 }
 
-using glm::vec2, glm::vec3, glm::vec4, glm::mat4; 
+using glm::vec2, glm::vec3, glm::vec4, glm::mat4;
 
-void Context::drawSprite(uint32_t texture, glm::vec2 pos, glm::vec2 size, float rotation, float alpha)
+void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color)
 {
     ZoneScoped;
 
     auto model = mat4(1.0f);
     model = glm::translate(model, vec3(pos, 0.0f));
-    model = glm::scale(model, vec3(size, 1.0f));
+    auto sz = tex.size();
+    model = glm::scale(model, vec3(tex.size() * scale, 1.0f));
 
     auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f) * model;
 
     sprite_shader.setUniform("Projection", projection);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, tex.texture());
 
     glBindVertexArray(quad_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);

@@ -187,12 +187,11 @@ int main(int argc, char **argv)
         self.clear({r,g,b});
     };
     gfx_type["drawSprite"] = [](
-        rana::gfx::Context &self, uint32_t tex, float x, float y, float w, float h, float r
+        rana::gfx::Context &self, rana::gfx::Texture &tex, float x, float y, float w, float h, float r
     ) {
         self.drawSprite(tex, {x,y}, {w,h}, r);
     };
-    gfx_type["loadTexture"] = rana::gfx::load_texture;
-    gfx_type["destroyTexture"] = rana::gfx::destroy_texture;
+    gfx_type["loadTexture"] = rana::gfx::Texture::load;
 
 
     cb_rana_load();
