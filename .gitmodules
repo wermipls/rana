@@ -19,3 +19,6 @@
 [submodule "luajit"]
 	path = LuaJIT
 	url = https://luajit.org/git/luajit.git
+[submodule "sol2"]
+	path = sol2
+	url = https://github.com/ThePhD/sol2

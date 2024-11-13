@@ -113,6 +113,9 @@ else()
     target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
 endif()
 
+# sol
+target_include_directories(rana PRIVATE sol2/include)
+
 # others
 target_include_directories(rana PRIVATE src)
 target_include_directories(rana PRIVATE external)

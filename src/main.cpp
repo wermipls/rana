@@ -14,6 +14,8 @@
 #include <glm/ext.hpp>
 #include "input.hpp"
 #include "audio/audio.hpp"
+#define SOL_ALL_SAFETIES_ON 1
+#include <sol/sol.hpp>
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
 {
@@ -48,111 +50,6 @@ enum Inputs : int {
     Jump,
 };
 
-float axis(float p1, float s1, float p2, float s2)
-{
-    float delta;
-
-    if (p1 < p2) {
-        delta = (p1 + s1) - (p2 - s2);
-        if (delta < 0.f) {
-            return 0;
-        }
-    } else {
-        delta = (p1 - s1) - (p2 + s2);
-        if (delta > 0.f) {
-            return 0;
-        }
-    }
-    return delta;
-}
-
-glm::vec2 aabb(glm::vec2 p1, glm::vec2 s1, glm::vec2 p2, glm::vec2 s2)
-{
-    s1 *= 0.5f;
-    s2 *= 0.5f;
-    glm::vec2 v{0.f};
-    glm::vec2 delta;
-    delta.x = axis(p1.x, s1.x, p2.x, s2.x);
-    if (!delta.x) {
-        return v;
-    }
-    delta.y = axis(p1.y, s1.y, p2.y, s2.y);
-    if (!delta.y) {
-        return v;
-    }
-
-    if (auto ad = glm::abs(delta); ad.x >= ad.y) {
-        delta.x = 0;
-    } else {
-        delta.y = 0;
-    }
-
-    return delta;
-}
-
-struct Player {
-    glm::vec2 pos{};
-    glm::vec2 size{};
-
-    glm::vec2 speed{};
-
-    float gravity = 0.1f;
-    bool grounded = false;
-
-    void doTick(rana::input::Mapper &input)
-    {
-        if (input.held(Inputs::Right)) {
-            speed.x = std::min(speed.x += 0.4f, 3.5f);
-        } else if (input.held(Inputs::Left)) {
-            speed.x = std::max(speed.x -= 0.4f, -3.5f);
-        } else {
-            speed.x = speed.x * (grounded ? 0.2f : 0.99f);
-        }
-
-        if (grounded && input.pressed(Inputs::Jump)) {
-            speed.y = -6.f;
-        }
-        grounded = false;
-        speed.y += gravity;
-        pos += speed;
-    }
-
-    void test(glm::vec2 bpos, glm::vec2 bsize)
-    {
-        auto v = aabb(bpos, bsize, pos, size);
-        pos += v;
-
-        if (v.y < 0.f && speed.y > 0.0f) {
-            speed.y = 0;
-            grounded = true;
-        }
-
-        if (v.y > 0.f && speed.y < 0.0f) {
-            speed.y = speed.y * -0.2f;
-        }
-
-        if (v.x > 0.f && speed.x < 0.0f) {
-            speed.x = 0;
-        }
-
-        if (v.x < 0.f && speed.x > 0.0f) {
-            speed.x = 0;
-        }
-    }
-
-    void debugWindow()
-    {
-        if (ImGui::Begin("Player")) {
-            ImGui::Text("pos: %6.3f %6.3f", pos.x, pos.y);
-            ImGui::Text("spd: %6.3f %6.3f", speed.x, speed.y);
-            ImGui::Text("grounded: %d", grounded);
-
-            ImGui::SliderFloat2("spd", (float*)&speed, -10, 10);
-        }
-        ImGui::End();
-    }
-};
-
 void synchronize_fps(double target_ticks_frame)
 {
     static uint64_t ticks_next = 0;
@@ -183,6 +80,64 @@ void enumerate_controllers()
     SDL_Init(SDL_INIT_GAMEPAD);
 }
 
+void module_path_from_name(std::string &name)
+{
+    for (auto &c : name) {
+        if (c == '.') {
+            c = '/';
+        }
+    }
+    name += ".lua";
+}
+
+int fs_loader(lua_State* L)
+{
+    auto name = sol::stack::get<std::string>(L, 1);
+    module_path_from_name(name);
+
+    if (rana::fs::exists(name.c_str())) {
+        std::vector<uint8_t> script;
+        if (rana::fs::readfile(script, name.c_str())) {
+            luaL_loadbuffer(L, (const char *)script.data(), script.size(), ("="+name).c_str());
+            return 1;
+        }
+    } else {
+        rana::log::err("module '%s' does not exist", name.c_str());
+    }
+    return 0;
+}
+
+sol::table open_fs(sol::this_state s)
+{
+    sol::state_view lua(s);
+
+    sol::table fs = lua.create_table();
+    fs["read"] = [lua](const char *fn) {
+        std::vector<uint8_t> data;
+        auto ok = rana::fs::readfile(data, fn);
+        if (ok) {
+            std::string str(data.begin(), data.end());
+            return sol::make_object(lua, str);
+        } else {
+            return sol::make_object(lua, sol::nil);
+        }
+    };
+
+    return fs;
+}
+
+sol::table open_log(sol::this_state s)
+{
+    sol::state_view lua(s);
+
+    sol::table log = lua.create_table();
+    log["err"]  = [](const char *msg) { rana::log::err("%s", msg); };
+    log["warn"] = [](const char *msg) { rana::log::warn("%s", msg); };
+    log["info"] = [](const char *msg) { rana::log::info("%s", msg); };
+
+    return log;
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 0) {
@@ -191,28 +146,56 @@ int main(int argc, char **argv)
 
     rana::fs::init(argv[0]);
 
-    auto ctx = rana::gfx::Context();
+    sol::state lua;
+    lua.open_libraries();
+    auto rana = lua["rana"].get_or_create<sol::table>();
+    lua.safe_script(R"(
+        function rana.error_handler(msg)
+            local tb = debug.traceback(msg, 2)
+            rana._error = tb
+            dlog(tb)
+        end
+    )", "=[rana setup]");
+    lua.add_package_loader(fs_loader);
+    sol::protected_function::set_default_handler(rana["error_handler"]);
 
-    std::vector<uint8_t> mus;
-    if (!rana::fs::readfile(mus, "out.ranamus")) {
-        return -1;
+    rana["fs"] = lua.require("fs", sol::c_call<decltype(&open_fs), &open_fs>, false);
+    rana["log"] = lua.require("log", sol::c_call<decltype(&open_log), &open_log>, false);
+
+    lua["require"]("main");
+
+    sol::protected_function cb_rana_load        = lua["rana"]["load"];
+    sol::protected_function cb_rana_draw        = lua["rana"]["draw"];
+    sol::protected_function cb_rana_update      = lua["rana"]["update"];
+    sol::protected_function cb_rana_configure   = lua["rana"]["configure"];
+
+    auto cfg = lua.create_table();
+    cb_rana_configure(cfg);
+
+    auto ctx = rana::gfx::Context(
+        cfg.get<const char *>("window_title"),
+        cfg.get_or("window_width", 800),
+        cfg.get_or("window_height", 600)
+    );
+
+    lua["gfx"] = &ctx;
+
+    auto gfx_type = lua.new_usertype<rana::gfx::Context>("gfx_type",
+        sol::constructors<rana::gfx::Context(const char *, int, int)>()
+    );
+    gfx_type["clear"] = [](rana::gfx::Context &self, float r, float g, float b) { 
+        self.clear({r,g,b});
     };
-    auto song = rana::musfmt::Song();
-    auto songser = rana::Serializer(mus);
-    song.serialize(songser);
+    gfx_type["drawSprite"] = [](
+        rana::gfx::Context &self, uint32_t tex, float x, float y, float w, float h, float r
+    ) {
+        self.drawSprite(tex, {x,y}, {w,h}, r);
+    };
+    gfx_type["loadTexture"] = rana::gfx::load_texture;
+    gfx_type["destroyTexture"] = rana::gfx::destroy_texture;
 
-    auto jump_sfx_file = std::vector<uint8_t>();
-    if (!rana::fs::readfile(jump_sfx_file, "jump.flac")) {
-        return -1;
-    }
-    auto jump_sfx = rana::audio::decode_flac(jump_sfx_file);
-    auto audio = rana::audio::Context(44100);
 
-    auto player = rana::audio::MusicPlayer(song, 44100);
-    rana::audio::init(44100, audio_callback_new, &audio);
-
-    auto brick = rana::gfx::load_texture("brik.png");
-    auto chara = rana::gfx::load_texture("chara.png");
+    cb_rana_load();
 
     enumerate_controllers();
     auto input = rana::input::Mapper();
@@ -222,32 +205,6 @@ int main(int argc, char **argv)
     std::vector<SDL_Gamepad *> enumerated_gamepads;
     enumerated_gamepads.reserve(16);
     SDL_Gamepad *current_gamepad = nullptr;
-
-    uint8_t map[24*16] = {
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0,
-        0,0,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-
-        0,0,1,0, 0,0,0,0, 0,1,1,1, 1,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-    };
-
-    auto plr = Player();
-    plr.size = {64, 64};
-    plr.pos = {440, 100};
 
     bool running = true;
 
@@ -299,31 +256,19 @@ int main(int argc, char **argv)
             ImGui_ImplSDL3_ProcessEvent(&e);
         }
 
-        ctx.drawBegin();
-        ctx.clear({0.7, 0.5, 0.6});
+        if (lua["rana"]["_error"] != sol::nil) {
+            ctx.drawBegin();
+            ctx.clear({0.9, 0, 0.45});
+            ctx.drawFinish();
+            synchronize_fps(1000.0/30.0);
+            continue;
+        }
 
         input.update(current_gamepad);
-        plr.doTick(input);
+        cb_rana_update(1.0/120.0);
 
-        for (int x = 0; x < 24; x++) {
-            for (int y = 0; y < 16; y++) {
-                if (!map[y * 24 + x]) continue;
-                glm::vec2 pos{x * 48, y * 48};
-                glm::vec2 size{48,48};
-                ctx.drawSprite(brick, pos-size/2.0f, size, 0);
-                plr.test(pos, size);
-            }
-        }
-        ctx.drawSprite(chara, glm::floor(plr.pos-plr.size/2.0f), plr.size, 0, 1.0f);
-        plr.debugWindow();
-        ImGui::ShowDemoWindow();
-        player.drawMixer();
-        player.drawPattern();
-
-        if (input.pressed(Inputs::Jump)) {
-            audio.setVolume(audio.playSample(jump_sfx.get()), 0.1);
-        }
-
+        ctx.drawBegin();
+        cb_rana_draw();
         ctx.drawFinish();
 
         synchronize_fps(1000.0 / 120.0);
