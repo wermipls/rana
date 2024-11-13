@@ -23,7 +23,7 @@ uint32_t create_fallback_texture()
     uint32_t data[size][size];
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
-            data[x][y] = ((x / (size/2)) != (y / (size/2))) ? 0xFFFF00FF : 0xFF000000;
+            data[x][y] = ((x / (size/2)) != (y / (size/2))) ? 0xFF8800FF : 0xFF88FF00;
         }
     }
 
