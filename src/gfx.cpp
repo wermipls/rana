@@ -71,20 +71,9 @@ Context::Context(const char *title, int w, int h)
 
     glViewport(0, 0, w, h);
 
-    uint32_t vbo;
-    float vertices[] = {
-        // pos      // tex      // color
-        0.0f, 1.0f, 0.0f, 1.0f, 1.f, 1.f, 1.f, 1.f,
-        1.0f, 0.0f, 1.0f, 0.0f, 1.f, 1.f, 1.f, 1.f,
-        0.0f, 0.0f, 0.0f, 0.0f, 1.f, 1.f, 1.f, 1.f,
-        0.0f, 1.0f, 0.0f, 1.0f, 1.f, 1.f, 1.f, 1.f,
-        1.0f, 1.0f, 1.0f, 1.0f, 1.f, 1.f, 1.f, 1.f,
-        1.0f, 0.0f, 1.0f, 0.0f, 1.f, 1.f, 1.f, 1.f,
-    };
     glGenVertexArrays(1, &quad_vao);
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindVertexArray(quad_vao);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -92,8 +81,6 @@ Context::Context(const char *title, int w, int h)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4*0));
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4*2));
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4*4));
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
 
     sprite_shader = Shader::fallback();
 
@@ -106,6 +93,8 @@ Context::Context(const char *title, int w, int h)
     // Setup Platform/Renderer backends
     ImGui_ImplSDL3_InitForOpenGL(window, glcontext);
     ImGui_ImplOpenGL3_Init();
+
+    batch.vtxbuf.reserve(1024);
 }
 
 Context::~Context()
@@ -152,15 +141,26 @@ void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color
 
     auto model = mat4(1.0f);
     model = glm::translate(model, vec3(pos, 0.0f));
-    auto sz = tex.size();
     model = glm::scale(model, vec3(tex.size() * scale, 1.0f));
 
-    auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f) * model;
+    auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
 
     sprite_shader.setUniform("Projection", projection);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex.texture());
+
+    DrawBatch::Vert quad[6] = {
+        { model * vec4{0,1,0,1}, {0,1}, color },
+        { model * vec4{1,0,0,1}, {1,0}, color },
+        { model * vec4{0,0,0,1}, {0,0}, color },
+        { model * vec4{0,1,0,1}, {0,1}, color },
+        { model * vec4{1,1,0,1}, {1,1}, color },
+        { model * vec4{1,0,0,1}, {1,0}, color },
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STREAM_DRAW);
 
     glBindVertexArray(quad_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);

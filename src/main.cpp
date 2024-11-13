@@ -186,10 +186,12 @@ int main(int argc, char **argv)
     gfx_type["clear"] = [](rana::gfx::Context &self, float r, float g, float b) { 
         self.clear({r,g,b});
     };
-    gfx_type["drawSprite"] = [](
-        rana::gfx::Context &self, rana::gfx::Texture &tex, float x, float y, float w, float h, float r
+    gfx_type["_drawSprite"] = [](
+        rana::gfx::Context &self, rana::gfx::Texture &tex,
+        float x, float y, float w, float h, float rot,
+        float r, float g, float b, float a 
     ) {
-        self.drawSprite(tex, {x,y}, {w,h}, r);
+        self.drawSprite(tex, {x,y}, {w,h}, rot, {r,g,b,a});
     };
     gfx_type["loadTexture"] = rana::gfx::Texture::load;
 
