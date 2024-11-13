@@ -127,6 +127,8 @@ void Context::drawBegin()
 
 void Context::drawFinish()
 {
+    flush();
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
