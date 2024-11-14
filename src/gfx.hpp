@@ -9,6 +9,7 @@
 #include <glm/ext.hpp>
 #include "shader.hpp"
 #include "gfx_textures.hpp"
+#include "font.hpp"
 
 namespace rana {
 namespace gfx {
@@ -52,6 +53,7 @@ public:
     void clear(vec3 color);
     void drawTextureSub(Texture &tex, vec4 rect, vec2 pos, vec4 color = {1,1,1,1});
     void drawSprite(Texture &tex, vec2 pos, vec2 scale = {1,1}, float r = 0, vec4 color = {1,1,1,1});
+    void text(Font &font, const char *text, vec2 pos, vec4 color = {1,1,1,1});
 
     auto resetTransform()   { transform = mat4(1.0f); }
     auto translate(vec2 v)  { transform = glm::translate(transform, vec3(v, 0.f)); }

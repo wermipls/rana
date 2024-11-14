@@ -15,6 +15,7 @@ include(ExternalProject)
 add_executable(rana WIN32
     src/main.cpp
     src/fs.cpp
+    src/font.cpp
     src/gfx.cpp
     src/gfx_textures.cpp
     src/shader.cpp
@@ -139,12 +140,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_libraries(rana -fansi-escape-codes -fuse-ld=lld -g -Wl,/debug,--pdb=)
     target_compile_options(rana PRIVATE -fansi-escape-codes -g -gcodeview)
     # gcc seems to have some trouble with lto...
-    string(APPEND CMAKE_CXX_FLAGS_RELEASE " -flto")
-    string(APPEND CMAKE_CXX_FLAGS_RELWITHDEBINFO " -flto")
-    string(APPEND CMAKE_CXX_FLAGS_MINSIZEREL " -flto")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " -flto")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO " -flto")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS_MINSIZEREL " -flto")
+    #string(APPEND CMAKE_CXX_FLAGS_RELEASE " -flto")
+    #string(APPEND CMAKE_CXX_FLAGS_RELWITHDEBINFO " -flto")
+    #string(APPEND CMAKE_CXX_FLAGS_MINSIZEREL " -flto")
+    #string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " -flto")
+    #string(APPEND CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO " -flto")
+    #string(APPEND CMAKE_EXE_LINKER_FLAGS_MINSIZEREL " -flto")
 endif()
 
 if(MSVC)

@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include "gfx.hpp"
 #include "gfx_textures.hpp"
+#include "font.hpp"
 #include "audio/backend.hpp"
 #include "music/player.hpp"
 #include "serializer.hpp"
@@ -178,6 +179,9 @@ int main(int argc, char **argv)
         cfg.get_or("window_height", 600)
     );
 
+    auto font_oops = rana::gfx::Font::load("Vegur-Bold.otf", 72);
+    auto font_traceback = rana::gfx::Font::load("Vegur-Regular.otf", 18);
+
     lua["gfx"] = &ctx;
 
     auto gfx_type = lua.new_usertype<rana::gfx::Context>("gfx_type",
@@ -271,7 +275,11 @@ int main(int argc, char **argv)
 
         if (lua["rana"]["_error"] != sol::nil) {
             ctx.drawBegin();
-            ctx.clear({0.9, 0, 0.45});
+            ctx.clear({0.95, 0.95, 0.95});
+
+            ctx.text(*font_oops, "oops.", {120, 156}, {0.73, 0.19, 0.39, 1});
+            ctx.text(*font_traceback, rana.get<const char*>("_error"), {120, 212}, {0.25, 0.25, 0.25, 1});
+
             ctx.drawFinish();
             synchronize_fps(1000.0/30.0);
             continue;

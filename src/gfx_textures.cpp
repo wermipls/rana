@@ -64,6 +64,33 @@ auto Texture::load(const char *fn) -> Texture
     return Texture(tex, {w, h});
 }
 
+auto Texture::loadBuffer(uint8_t *buf, int w, int h, int ch) -> Texture
+{
+    uint32_t format;
+    switch (ch) {
+        case 4: format = GL_RGBA; break;
+        case 3: format = GL_RGB; break;
+        case 1: format = GL_RED; break;
+        default:
+            log::err("unsupported texture channel count: %d", ch);
+            return fallback();
+    }
+
+    uint32_t tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
+    if (ch == 1) {
+        int swizzle[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
+        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    return Texture(tex, {w, h});
+}
+
 auto Texture::setMagFilter(Filter f) -> void
 {
     glBindTexture(GL_TEXTURE_2D, tex);
