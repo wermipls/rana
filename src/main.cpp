@@ -194,6 +194,10 @@ int main(int argc, char **argv)
         self.drawSprite(tex, {x,y}, {w,h}, rot, {r,g,b,a});
     };
     gfx_type["loadTexture"] = rana::gfx::Texture::load;
+    gfx_type["resetTransform"] = rana::gfx::Context::resetTransform;
+    gfx_type["rotate"] = rana::gfx::Context::rotate;
+    gfx_type["translate"] = [](rana::gfx::Context &self, float x, float y) { self.translate({x,y}); };
+    gfx_type["scale"] = [](rana::gfx::Context &self, float x, float y) { self.scale({x,y}); };
 
 
     cb_rana_load();

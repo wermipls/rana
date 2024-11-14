@@ -5,6 +5,8 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/ext.hpp>
 #include "shader.hpp"
 #include "gfx_textures.hpp"
 
@@ -28,6 +30,7 @@ class Context {
     using vec2 = glm::vec2;
     using vec3 = glm::vec3;
     using vec4 = glm::vec4;
+    using mat4 = glm::mat4;
 
     SDL_Window *window;
     SDL_GLContext glcontext;
@@ -35,6 +38,7 @@ class Context {
     uint32_t quad_vao;
     uint32_t vbo;
     DrawBatch batch;
+    mat4 transform;
 
     void flush();
 
@@ -47,6 +51,11 @@ public:
 
     void clear(vec3 color);
     void drawSprite(Texture &tex, vec2 pos, vec2 scale = {1,1}, float r = 0, vec4 color = {1,1,1,1});
+
+    auto resetTransform()   { transform = mat4(1.0f); }
+    auto translate(vec2 v)  { transform = glm::translate(transform, vec3(v, 0.f)); }
+    auto rotate(float r)    { transform = glm::rotate(transform, r, {0,0,1}); }
+    auto scale(vec2 v)      { transform = glm::scale(transform, vec3{v, 1.f}); }
 };
 
 }

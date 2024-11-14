@@ -123,6 +123,8 @@ void Context::drawBegin()
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    resetTransform();
 }
 
 void Context::drawFinish()
@@ -168,7 +170,7 @@ void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color
         batch.texture = t;
     }
 
-    auto model = mat4(1.0f);
+    auto model = transform;
     model = glm::translate(model, vec3(pos, 0.0f));
     model = glm::rotate(model, r, {0,0,1});
     model = glm::scale(model, vec3(tex.size() * scale, 1.0f));
