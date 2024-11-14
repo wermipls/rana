@@ -193,6 +193,14 @@ int main(int argc, char **argv)
     ) {
         self.drawSprite(tex, {x,y}, {w,h}, rot, {r,g,b,a});
     };
+    gfx_type["drawTextureSub"] = [](
+        rana::gfx::Context &self, rana::gfx::Texture &tex,
+        float x1, float y1, float x2, float y2,
+        float x, float y
+        //float r, float g, float b, float a 
+    ) {
+        self.drawTextureSub(tex, {x1,y1,x2,y2}, {x,y});
+    };
     gfx_type["loadTexture"] = rana::gfx::Texture::load;
     gfx_type["resetTransform"] = rana::gfx::Context::resetTransform;
     gfx_type["rotate"] = rana::gfx::Context::rotate;

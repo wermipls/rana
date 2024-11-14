@@ -160,6 +160,33 @@ void Context::flush()
     batch.vtxbuf.resize(0);
 }
 
+void Context::drawTextureSub(Texture &tex, vec4 rect, vec2 pos, vec4 color)
+{
+    ZoneScoped;
+
+    auto t = tex.texture();
+    if (batch.texture != t) {
+        flush();
+        batch.texture = t;
+    }
+
+    auto r1 = vec2{rect.x, rect.y};
+    auto size = vec2{rect.z, rect.w};
+    auto r2 = r1 + size;
+
+    auto model = transform;
+    model = glm::translate(model, vec3(pos, 0.0f));
+    model = glm::scale(model, vec3(size, 1.0f));
+
+    auto &buf = batch.vtxbuf;
+    buf.push_back({ model * vec4{0,1,0,1}, vec2{r1.x,r2.y} / tex.size(), color });
+    buf.push_back({ model * vec4{1,0,0,1}, vec2{r2.x,r1.y} / tex.size(), color });
+    buf.push_back({ model * vec4{0,0,0,1}, vec2{r1.x,r1.y} / tex.size(), color });
+    buf.push_back({ model * vec4{0,1,0,1}, vec2{r1.x,r2.y} / tex.size(), color });
+    buf.push_back({ model * vec4{1,1,0,1}, vec2{r2.x,r2.y} / tex.size(), color });
+    buf.push_back({ model * vec4{1,0,0,1}, vec2{r2.x,r1.y} / tex.size(), color });
+}
+
 void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color)
 {
     ZoneScoped;

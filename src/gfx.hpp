@@ -50,6 +50,7 @@ public:
     void drawFinish();
 
     void clear(vec3 color);
+    void drawTextureSub(Texture &tex, vec4 rect, vec2 pos, vec4 color = {1,1,1,1});
     void drawSprite(Texture &tex, vec2 pos, vec2 scale = {1,1}, float r = 0, vec4 color = {1,1,1,1});
 
     auto resetTransform()   { transform = mat4(1.0f); }
