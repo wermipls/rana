@@ -7,6 +7,14 @@ namespace rana {
 namespace gfx {
 
 class Texture {
+    enum class Filter : int {
+        Nearest              = 0x2600,
+        Linear               = 0x2601,
+        LinearMipmap         = 0x2703, // this one is GL_LINEAR_MIPMAP_LINEAR
+        NearestMipmapNearest = 0x2700, // those three are other,
+        LinearMipmapNearest  = 0x2701, // nonsensical combinations.
+        NearestMipmapLinear  = 0x2702, // why would you want those?
+    };
     using vec2 = glm::vec2;
     using vec4 = glm::vec4;
 
@@ -23,6 +31,10 @@ public:
 
     static auto load(const char *fn) -> Texture;
     static auto fallback() -> Texture;
+
+    auto setMagFilter(Filter f) -> void;
+    auto setMinFilter(Filter f) -> void;
+    auto setFilter(Filter f) { setMagFilter(f); setMinFilter(f); };
 
     constexpr auto texture() { return tex; }
     constexpr auto width() { return size_px.x; }
