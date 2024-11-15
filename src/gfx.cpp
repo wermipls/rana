@@ -109,6 +109,7 @@ Context::~Context()
 
 void Context::clear(glm::vec3 color)
 {
+    color = srgb(color);
     glClearColor(color.r, color.g, color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -119,6 +120,7 @@ void Context::drawBegin()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    glEnable(GL_FRAMEBUFFER_SRGB);
     sprite_shader.use();
 
     glEnable(GL_BLEND);
@@ -196,6 +198,8 @@ void Context::drawSprite(Texture &tex, vec2 pos, vec2 scale, float r, vec4 color
         flush();
         batch.texture = t;
     }
+
+    color = srgb(color);
 
     auto model = transform;
     model = glm::translate(model, vec3(pos, 0.0f));
@@ -292,6 +296,7 @@ static uint32_t utf8_to_unicode32(const char **s)
 
 void Context::text(Font &font, const char *text, vec2 pos, vec4 color)
 {
+    color = srgb(color);
     // fixme: no utf8 decode. lmao
     float origin_x = pos.x;
 

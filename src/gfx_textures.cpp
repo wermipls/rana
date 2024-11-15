@@ -30,7 +30,7 @@ auto Texture::fallback() -> Texture
     uint32_t tex; 
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -54,7 +54,7 @@ auto Texture::load(const char *fn) -> Texture
     uint32_t tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -66,11 +66,12 @@ auto Texture::load(const char *fn) -> Texture
 
 auto Texture::loadBuffer(uint8_t *buf, int w, int h, int ch) -> Texture
 {
+    uint32_t internal_format;
     uint32_t format;
     switch (ch) {
-        case 4: format = GL_RGBA; break;
-        case 3: format = GL_RGB; break;
-        case 1: format = GL_RED; break;
+        case 4: internal_format = GL_SRGB_ALPHA; format = GL_RGBA; break;
+        case 3: internal_format = GL_SRGB;       format = GL_RGB; break;
+        case 1: internal_format = GL_RED;        format = GL_RED; break;
         default:
             log::err("unsupported texture channel count: %d", ch);
             return fallback();
@@ -79,7 +80,7 @@ auto Texture::loadBuffer(uint8_t *buf, int w, int h, int ch) -> Texture
     uint32_t tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
+    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
     if (ch == 1) {
         int swizzle[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
         glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
