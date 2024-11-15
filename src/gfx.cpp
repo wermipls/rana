@@ -15,6 +15,43 @@
 namespace rana {
 namespace gfx {
 
+void GLAPIENTRY opengl_msg_cb(GLenum source, GLenum type, GLuint id,
+                              GLenum severity, GLsizei length,
+                              const GLchar* message, const void* /*user_param*/)
+{
+    const char *fmt = "GL: %s - %s: %s";
+    const char *s_src = "unknown";
+    const char *s_type = "unknown";
+    switch (source) {
+        case GL_DEBUG_SOURCE_API:               s_src = "api"; break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:     s_src = "window"; break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER:   s_src = "shader"; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:       s_src = "3rdparty"; break;
+        case GL_DEBUG_SOURCE_APPLICATION:       s_src = "app"; break;
+        case GL_DEBUG_SOURCE_OTHER:             s_src = "other"; break;
+    }
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR:               s_type = "err"; break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: s_type = "deprecated"; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  s_type = "undefined"; break;
+        case GL_DEBUG_TYPE_PORTABILITY:         s_type = "portability"; break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         s_type = "performance"; break;
+        case GL_DEBUG_TYPE_MARKER:              s_type = "marker"; break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          s_type = "push"; break;
+        case GL_DEBUG_TYPE_POP_GROUP:           s_type = "pop"; break;
+        case GL_DEBUG_TYPE_OTHER:               s_type = "other"; break;
+    }
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH:
+            log::err(fmt, s_src, s_type, message);
+            break;
+        case GL_DEBUG_SEVERITY_MEDIUM:
+        case GL_DEBUG_SEVERITY_LOW:
+            log::warn(fmt, s_src, s_type, message);
+            break;
+    }
+}
+
 unsigned int create_vao(float *vertices, size_t sz_vertices, unsigned int *indices, size_t sz_indices)
 {
     unsigned int vao;
@@ -68,6 +105,9 @@ Context::Context(const char *title, int w, int h)
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         throw std::runtime_error("failed to initialize glad");
     }
+
+    glDebugMessageCallback(opengl_msg_cb, nullptr);
+    glEnable(GL_DEBUG_OUTPUT);
 
     glViewport(0, 0, w, h);
 
