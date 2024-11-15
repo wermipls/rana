@@ -337,15 +337,15 @@ static uint32_t utf8_to_unicode32(const char **s)
 void Context::text(Font &font, const char *text, vec2 pos, vec4 color)
 {
     color = srgb(color);
-    // fixme: no utf8 decode. lmao
-    float origin_x = pos.x;
+    auto origin = pos;
+    pos = {0,0};
 
     auto p = text;
     while (*p) {
         auto codepoint = utf8_to_unicode32(&p);
         p++;
         if (codepoint == '\n') {
-            pos.x = origin_x;
+            pos.x = 0;
             pos.y += font.lineHeight();
             continue;
         } else if (codepoint == '\t') {
@@ -353,7 +353,10 @@ void Context::text(Font &font, const char *text, vec2 pos, vec4 color)
             continue;
         }
         auto g = font.getGlyph(codepoint);
-        drawTextureSub(font.texture(), {g.x0, g.y0, g.x1-g.x0, g.y1-g.y0}, glm::round(pos + g.off), color);
+        // only the offset from the origin gets rounded, this is for two reasons:
+        // 1) allow subpixel position AND keep text perfectly sharp w/ integer values
+        // 2) avoid ugly snapping when doing subpixel movement
+        drawTextureSub(font.texture(), {g.x0, g.y0, g.x1-g.x0, g.y1-g.y0}, origin + glm::round(pos + g.off), color);
         pos.x += g.advance;
     }
 }
