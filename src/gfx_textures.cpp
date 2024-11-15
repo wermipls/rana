@@ -13,6 +13,7 @@
 #include "stb_image.h"
 
 #include <glad/glad.h>
+#include "error_handling.hpp"
 
 namespace rana {
 namespace gfx {
@@ -73,7 +74,7 @@ auto Texture::loadBuffer(uint8_t *buf, int w, int h, int ch) -> Texture
         case 3: internal_format = GL_SRGB;       format = GL_RGB; break;
         case 1: internal_format = GL_RED;        format = GL_RED; break;
         default:
-            log::err("unsupported texture channel count: %d", ch);
+            throw Exception("unsupported texture channel count: " + std::to_string(ch));
             return fallback();
     }
 

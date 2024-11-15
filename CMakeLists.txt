@@ -152,6 +152,7 @@ if(MSVC)
   target_compile_options(rana PRIVATE /W4)
 else()
   target_compile_options(rana PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(rana PRIVATE -ffile-prefix-map=${PROJECT_SOURCE_DIR}=rana)
 endif()
 
 option(RANA_BUILD_CORN "build the 'corn' converter tool" OFF)

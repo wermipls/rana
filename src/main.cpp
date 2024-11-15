@@ -16,6 +16,7 @@
 #include "input.hpp"
 #include "audio/audio.hpp"
 #define SOL_ALL_SAFETIES_ON 1
+#define SOL_EXCEPTIONS_ALWAYS_UNSAFE 1
 #include <sol/sol.hpp>
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
@@ -152,7 +153,7 @@ int main(int argc, char **argv)
     auto rana = lua["rana"].get_or_create<sol::table>();
     lua.safe_script(R"(
         function rana.error_handler(msg)
-            local tb = debug.traceback(msg, 2)
+            local tb = debug.traceback(msg .. "\n", 2)
             rana._error = tb
             dlog(tb)
         end
