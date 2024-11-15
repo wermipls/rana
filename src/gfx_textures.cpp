@@ -12,7 +12,11 @@
 #define STBI_MAX_DIMENSIONS 8192
 #include "stb_image.h"
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image_resize2.h>
+
 #include <glad/glad.h>
+#include <tracy/Tracy.hpp>
 #include "error_handling.hpp"
 
 namespace rana {
@@ -20,6 +24,8 @@ namespace gfx {
 
 static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
 {
+    ZoneScoped;
+
     uint32_t internal_format;
     uint32_t format;
     switch (ch) {
@@ -41,8 +47,36 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // fixme: insert custom mipmap gen here
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if ((ch != 3) && (ch != 4)) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        return tex;
+    }
+
+    int w_new = w;
+    int h_new = h;
+    unsigned char *s = nullptr;
+    int lv;
+    for (lv = 1; ; lv++) {
+        w_new /= 2;
+        h_new /= 2;
+        if (!(w_new && h_new)) {
+            break;
+        }
+
+        auto newbuf = stbir_resize_uint8_srgb(buf, w, h, w*ch, s, w_new, h_new, w_new*ch,
+                                              ch == 4 ? STBIR_RGBA : STBIR_RGB);
+        if (!newbuf) {
+            break;
+        }
+        s = newbuf;
+        glTexImage2D(
+            GL_TEXTURE_2D, lv, internal_format, w_new, h_new, 0, format, GL_UNSIGNED_BYTE, s
+        );
+    }
+    STBIR_FREE(s, nullptr);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, lv-1);
 
     return tex;
 }
