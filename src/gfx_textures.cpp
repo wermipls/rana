@@ -18,6 +18,35 @@
 namespace rana {
 namespace gfx {
 
+static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
+{
+    uint32_t internal_format;
+    uint32_t format;
+    switch (ch) {
+        case 4: internal_format = GL_SRGB_ALPHA; format = GL_RGBA; break;
+        case 3: internal_format = GL_SRGB;       format = GL_RGB; break;
+        case 1: internal_format = GL_RED;        format = GL_RED; break;
+        default:
+            throw Exception("unsupported texture channel count: " + std::to_string(ch));
+    }
+
+    uint32_t tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
+    if (ch == 1) {
+        int swizzle[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
+        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // fixme: insert custom mipmap gen here
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    return tex;
+}
+
 auto Texture::fallback() -> Texture
 {
     static constexpr auto size = 64;
@@ -28,12 +57,7 @@ auto Texture::fallback() -> Texture
         }
     }
 
-    uint32_t tex; 
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    auto tex = generate_texture_from_buffer((uint8_t *)data, size, size, 4);
 
     return Texture(tex, vec2{size, size});
 }
@@ -52,13 +76,7 @@ auto Texture::load(const char *fn) -> Texture
         return fallback();
     }
 
-    uint32_t tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    auto tex = generate_texture_from_buffer(data, w, h, 4);
 
     stbi_image_free(data);
 
@@ -67,28 +85,7 @@ auto Texture::load(const char *fn) -> Texture
 
 auto Texture::loadBuffer(uint8_t *buf, int w, int h, int ch) -> Texture
 {
-    uint32_t internal_format;
-    uint32_t format;
-    switch (ch) {
-        case 4: internal_format = GL_SRGB_ALPHA; format = GL_RGBA; break;
-        case 3: internal_format = GL_SRGB;       format = GL_RGB; break;
-        case 1: internal_format = GL_RED;        format = GL_RED; break;
-        default:
-            throw Exception("unsupported texture channel count: " + std::to_string(ch));
-            return fallback();
-    }
-
-    uint32_t tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
-    if (ch == 1) {
-        int swizzle[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
-    }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    auto tex = generate_texture_from_buffer(buf, w, h, ch);
 
     return Texture(tex, {w, h});
 }
