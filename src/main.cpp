@@ -206,6 +206,11 @@ int main(int argc, char **argv)
     ) {
         self.drawTextureSub(tex, {x1,y1,x2,y2}, {x,y});
     };
+    gfx_type["text"] = [](
+        rana::gfx::Context &self, rana::gfx::Font &font, float x, float y, const char *text
+    ) {
+        self.text(font, text, glm::vec2{x,y});
+    };
     gfx_type["loadTexture"] = &rana::gfx::Texture::load;
     gfx_type["resetTransform"] = &rana::gfx::Context::resetTransform;
     gfx_type["pushTransform"] =  &rana::gfx::Context::pushTransform;
