@@ -44,6 +44,7 @@ class Context {
     uint32_t vbo;
     DrawBatch batch;
     mat4 transform;
+    std::vector<mat4> transform_stack;
 
     void flush();
 
@@ -63,6 +64,24 @@ public:
     auto translate(vec2 v)  { transform = glm::translate(transform, vec3(v, 0.f)); }
     auto rotate(float r)    { transform = glm::rotate(transform, r, {0,0,1}); }
     auto scale(vec2 v)      { transform = glm::scale(transform, vec3{v, 1.f}); }
+
+    auto pushTransform()
+    {
+        if (transform_stack.size() >= 32) {
+            transform_stack.resize(0);
+            throw Exception("stack depth exceeds maximum (32). chances are you are doing something terribly wrong");
+        }
+        transform_stack.push_back(transform);
+    }
+
+    auto popTransform()
+    {
+        if (transform_stack.size() == 0) {
+            throw Exception("there is nothing left to pop");
+        }
+        transform = transform_stack.back();
+        transform_stack.pop_back();
+    }
 };
 
 }

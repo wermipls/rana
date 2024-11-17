@@ -208,6 +208,8 @@ int main(int argc, char **argv)
     };
     gfx_type["loadTexture"] = &rana::gfx::Texture::load;
     gfx_type["resetTransform"] = &rana::gfx::Context::resetTransform;
+    gfx_type["pushTransform"] =  &rana::gfx::Context::pushTransform;
+    gfx_type["popTransform"] =   &rana::gfx::Context::popTransform;
     gfx_type["rotate"] = &rana::gfx::Context::rotate;
     gfx_type["translate"] = [](rana::gfx::Context &self, float x, float y) { self.translate({x,y}); };
     gfx_type["scale"] = [](rana::gfx::Context &self, float x, float y) { self.scale({x,y}); };

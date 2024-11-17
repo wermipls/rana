@@ -171,6 +171,10 @@ void Context::drawBegin()
 
 void Context::drawFinish()
 {
+    if (auto sz = transform_stack.size(); sz != 0) {
+        transform_stack.resize(0);
+        log::warn("transform stack is non zero (size == %d); likely a missing pop somewhere", sz);
+    }
     flush();
 
     ImGui::Render();
