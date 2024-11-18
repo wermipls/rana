@@ -79,7 +79,13 @@ unsigned int create_vao(float *vertices, size_t sz_vertices, unsigned int *indic
 
 Context::Context(const char *title, int w, int h)
 {
-    SDL_Init(SDL_INIT_VIDEO);
+    if (w <= 0 || h <= 0) {
+        throw Exception("invalid width/height");
+    }
+
+    if (int error = SDL_Init(SDL_INIT_VIDEO)) {
+        throw Exception(err("failed to initialize video subsystem: ") + SDL_GetError());
+    }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -94,16 +100,16 @@ Context::Context(const char *title, int w, int h)
     );
 
     if (!window) {
-        throw std::runtime_error("failed to create window");
+        throw Exception(err("failed to create window: ") + SDL_GetError());
     }
 
     glcontext = SDL_GL_CreateContext(window);
     if (!glcontext) {
-        throw std::runtime_error("failed to create gl context");
+        throw Exception(err("failed to create gl context: ") + SDL_GetError());
     }
 
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        throw std::runtime_error("failed to initialize glad");
+        throw Exception("failed to initialize glad");
     }
 
     glDebugMessageCallback(opengl_msg_cb, nullptr);
