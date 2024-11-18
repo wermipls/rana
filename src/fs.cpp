@@ -3,6 +3,7 @@
 #include <physfs.h>
 #include <stdlib.h>
 #include "log.hpp"
+#include "nogame.hpp"
 
 namespace rana {
 namespace fs {
@@ -23,6 +24,7 @@ void init(const char *argv0)
     PHYSFS_mount("assets.zip", nullptr, 0);
     PHYSFS_mount("./", nullptr, 0);
     PHYSFS_mount("../assets/", nullptr, 0);
+    PHYSFS_mountMemory(default_assets, sizeof(default_assets), nullptr, "__rana.zip", nullptr, 1);
 }
 
 bool readfile(std::vector<uint8_t> &buffer, const char *fn)

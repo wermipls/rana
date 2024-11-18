@@ -180,10 +180,12 @@ int main(int argc, char **argv)
         cfg.get_or("window_height", 600)
     );
 
-    auto font_oops = rana::gfx::Font::load("Vegur-Bold.otf", 72);
-    auto font_traceback = rana::gfx::Font::load("Vegur-Regular.otf", 18);
+    auto font_oops = rana::gfx::Font::load("__rana/Vegur-Bold.otf", 72);
+    auto font_traceback = rana::gfx::Font::load("__rana/Vegur-Regular.otf", 18);
+    rana["_font_oops"] = &(*font_oops);
+    rana["_font_default"] = &(*font_traceback);
 
-    lua["gfx"] = &ctx;
+    rana["gfx"] = &ctx;
 
     auto gfx_type = lua.new_usertype<rana::gfx::Context>("gfx_type",
         sol::constructors<rana::gfx::Context(const char *, int, int)>()
@@ -191,25 +193,26 @@ int main(int argc, char **argv)
     gfx_type["clear"] = [](rana::gfx::Context &self, float r, float g, float b) { 
         self.clear({r,g,b});
     };
-    gfx_type["_drawSprite"] = [](
+    gfx_type["drawSprite"] = [](
         rana::gfx::Context &self, rana::gfx::Texture &tex,
         float x, float y, float w, float h, float rot,
-        float r, float g, float b, float a 
+        float r, float g, float b, float a
     ) {
         self.drawSprite(tex, {x,y}, {w,h}, rot, {r,g,b,a});
     };
     gfx_type["drawTextureSub"] = [](
         rana::gfx::Context &self, rana::gfx::Texture &tex,
         float x1, float y1, float x2, float y2,
-        float x, float y
-        //float r, float g, float b, float a 
+        float x, float y,
+        float r, float g, float b, float a 
     ) {
-        self.drawTextureSub(tex, {x1,y1,x2,y2}, {x,y});
+        self.drawTextureSub(tex, {x1,y1,x2,y2}, {x,y}, {r,g,b,a});
     };
     gfx_type["text"] = [](
-        rana::gfx::Context &self, rana::gfx::Font &font, float x, float y, const char *text
+        rana::gfx::Context &self, rana::gfx::Font &font, float x, float y, const char *text,
+        float r, float g, float b, float a
     ) {
-        self.text(font, text, glm::vec2{x,y});
+        self.text(font, text, glm::vec2{x,y}, {r,g,b,a});
     };
     gfx_type["loadTexture"] = &rana::gfx::Texture::load;
     gfx_type["resetTransform"] = &rana::gfx::Context::resetTransform;
@@ -218,7 +221,17 @@ int main(int argc, char **argv)
     gfx_type["rotate"] = &rana::gfx::Context::rotate;
     gfx_type["translate"] = [](rana::gfx::Context &self, float x, float y) { self.translate({x,y}); };
     gfx_type["scale"] = [](rana::gfx::Context &self, float x, float y) { self.scale({x,y}); };
+    gfx_type["loadFont"] = [](sol::this_state s, const char *fn, float size) {
+        auto result = rana::gfx::Font::load(fn, size);
+        if (result) {
+            return std::move(*result);
+        } else {
+            luaL_error(s.lua_state(), result.error().c_str());
+        }
+    };
 
+    auto type_texture = lua.new_usertype<rana::gfx::Texture>("Texture");
+    type_texture["setMinFilter"] = &rana::gfx::Texture::setMinFilter;
 
     cb_rana_load();
 
@@ -232,6 +245,7 @@ int main(int argc, char **argv)
     SDL_Gamepad *current_gamepad = nullptr;
 
     bool running = true;
+    auto ticks_ns = SDL_GetTicksNS();
 
     while (running) {
         SDL_Event e;
@@ -294,7 +308,9 @@ int main(int argc, char **argv)
         }
 
         input.update(current_gamepad);
-        cb_rana_update(1.0/120.0);
+        auto ticks_new = SDL_GetTicksNS();
+        cb_rana_update(double(ticks_new - ticks_ns) / 1000000000.0);
+        ticks_ns = ticks_new;
 
         ctx.drawBegin();
         cb_rana_draw();
