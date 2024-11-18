@@ -179,6 +179,11 @@ int rana_main(int argc, char **argv)
         cfg.get_or("window_width", 800),
         cfg.get_or("window_height", 600)
     );
+    int canvas_width  = cfg.get_or("canvas_width", 0);
+    int canvas_height = cfg.get_or("canvas_height", 0);
+    if (canvas_width && canvas_height) {
+        ctx.setCanvasSize(canvas_width, canvas_height);
+    }
 
     auto font_oops = rana::gfx::Font::load("__rana/Vegur-Bold.otf", 72);
     auto font_traceback = rana::gfx::Font::load("__rana/Vegur-Regular.otf", 18);

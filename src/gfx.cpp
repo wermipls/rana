@@ -141,6 +141,8 @@ Context::Context(const char *title, int w, int h)
     ImGui_ImplOpenGL3_Init();
 
     batch.vtxbuf.reserve(1024);
+
+    setCanvasSize(w,h);
 }
 
 Context::~Context()
@@ -197,7 +199,6 @@ void Context::flush()
         return;
     }
 
-    auto projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
     sprite_shader.setUniform("Projection", projection);
 
     glActiveTexture(GL_TEXTURE0);

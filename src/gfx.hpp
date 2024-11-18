@@ -44,6 +44,7 @@ class Context {
     uint32_t vbo;
     DrawBatch batch;
     mat4 transform;
+    mat4 projection;
     std::vector<mat4> transform_stack;
 
     void flush();
@@ -59,6 +60,8 @@ public:
     void drawTextureSub(Texture &tex, vec4 rect, vec2 pos, vec4 color = {1,1,1,1});
     void drawSprite(Texture &tex, vec2 pos, vec2 scale = {1,1}, float r = 0, vec4 color = {1,1,1,1});
     void text(Font &font, const char *text, vec2 pos, vec4 color = {1,1,1,1});
+
+    auto setCanvasSize(float width, float height) { projection = glm::ortho(0.0f, width, height, 0.0f); };
 
     auto resetTransform()   { transform = mat4(1.0f); }
     auto translate(vec2 v)  { transform = glm::translate(transform, vec3(v, 0.f)); }
