@@ -27,17 +27,19 @@ class Font {
     float _line_height;
     float _ascent;
     float _descent;
+    float _size_pt;
 
     Font(Texture &t, glyph_map glyphs) : glyphs{glyphs}, tex{std::move(t)} { }
 public:
 
-    static auto load(const char *fn, float size, bool is_point_size = true) -> expected<Font, err>;
+    static auto load(const char *fn, float size_pt) -> expected<Font, err>;
 
     constexpr auto &texture() { return tex; }
     constexpr auto lineGap() { return _line_gap; }
     constexpr auto lineHeight() { return _line_height; }
     constexpr auto ascent() { return _ascent; }
     constexpr auto descent() { return _descent; }
+    constexpr auto sizePt() { return _size_pt; }
 
     inline auto getGlyph(uint32_t cp)
     {

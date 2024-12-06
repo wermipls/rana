@@ -234,6 +234,7 @@ int rana_main(int argc, char **argv)
             luaL_error(s.lua_state(), result.error().c_str());
         }
     };
+    gfx_type["fontSize"] = &rana::gfx::Context::fontSize;
 
     auto type_texture = lua.new_usertype<rana::gfx::Texture>("Texture");
     type_texture["setMinFilter"] = &rana::gfx::Texture::setMinFilter;
@@ -304,7 +305,9 @@ int rana_main(int argc, char **argv)
             ctx.drawBegin();
             ctx.clear({0.95, 0.95, 0.95});
 
+            ctx.fontSize(72);
             ctx.text(*font_oops, "oops.", {120, 156}, {0.73, 0.19, 0.39, 1});
+            ctx.fontSize(18);
             ctx.text(*font_traceback, rana.get<const char*>("_error"), {120, 212}, {0.25, 0.25, 0.25, 1});
 
             ctx.drawFinish();

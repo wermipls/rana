@@ -10,8 +10,10 @@
 namespace rana {
 namespace gfx {
 
-auto Font::load(const char *fn, float size, bool is_point_size) -> expected<Font, err>
+auto Font::load(const char *fn, float size_pt) -> expected<Font, err>
 {
+    size_pt *= 2; // oversample
+
     std::vector<uint8_t> font_file;
     if (!fs::readfile(font_file, fn)) {
         return unexpected("failed to read font file");
@@ -31,15 +33,13 @@ auto Font::load(const char *fn, float size, bool is_point_size) -> expected<Font
         return unexpected("pack begin fail");
     }
 
-    //stbtt_PackSetOversampling(&pc, oversample, oversample); FIXME: font is not scale aware
-
     // fixme: assumes a single range.. not customizable
     constexpr auto range_start = 31;
     constexpr auto range_end = 512;
     constexpr auto range_size = range_end - range_start;
     stbtt_packedchar range1[range_size];
     stbtt_pack_range range{};
-    range.font_size = is_point_size ? STBTT_POINT_SIZE(size) : size;
+    range.font_size = STBTT_POINT_SIZE(size_pt);
     range.first_unicode_codepoint_in_range = range_start;
     range.num_chars = range_size;
     range.chardata_for_range = range1;
@@ -74,16 +74,13 @@ auto Font::load(const char *fn, float size, bool is_point_size) -> expected<Font
     int ascent, descent, linegap;
     stbtt_GetFontVMetrics(&info, &ascent, &descent, &linegap);
 
-    float scale;
-    if (is_point_size) {
-        scale = stbtt_ScaleForMappingEmToPixels(&info, size);
-    } else {
-        scale = stbtt_ScaleForPixelHeight(&info, size);
-    }
+    float scale = stbtt_ScaleForMappingEmToPixels(&info, size_pt);
+
     font._line_gap = linegap * scale;
     font._ascent = ascent * scale;
     font._descent = descent * scale;
     font._line_height = font._ascent - font._descent + font._line_gap;
+    font._size_pt = size_pt;
 
     font.placeholder = font.glyphs[31]; // FIXME: hack
     return font;

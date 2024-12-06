@@ -348,7 +348,11 @@ static uint32_t utf8_to_unicode32(const char **s)
 void Context::text(Font &font, const char *text, vec2 pos, vec4 color)
 {
     color = srgb(color);
-    auto origin = pos;
+
+    float font_scale = font_size / font.sizePt();
+    pushTransform();
+    translate(pos);
+    scale(vec2{font_scale});
     pos = {0,0};
 
     auto p = text;
@@ -367,9 +371,11 @@ void Context::text(Font &font, const char *text, vec2 pos, vec4 color)
         // only the offset from the origin gets rounded, this is for two reasons:
         // 1) allow subpixel position AND keep text perfectly sharp w/ integer values
         // 2) avoid ugly snapping when doing subpixel movement
-        drawTextureSub(font.texture(), {g.x0, g.y0, g.x1-g.x0, g.y1-g.y0}, origin + glm::round(pos + g.off), color);
+        drawTextureSub(font.texture(), {g.x0, g.y0, g.x1-g.x0, g.y1-g.y0}, glm::round(pos + g.off), color);
         pos.x += g.advance;
     }
+
+    popTransform();
 }
 
 }

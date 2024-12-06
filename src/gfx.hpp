@@ -47,6 +47,8 @@ class Context {
     mat4 projection;
     std::vector<mat4> transform_stack;
 
+    float font_size = 12;
+
     void flush();
 
 public:
@@ -61,6 +63,7 @@ public:
     void drawSprite(Texture &tex, vec2 pos, vec2 scale = {1,1}, float r = 0, vec4 color = {1,1,1,1});
     void text(Font &font, const char *text, vec2 pos, vec4 color = {1,1,1,1});
 
+    void fontSize(float pt) { font_size = pt; }
     auto setCanvasSize(float width, float height) { projection = glm::ortho(0.0f, width, height, 0.0f); };
 
     auto resetTransform()   { transform = mat4(1.0f); }
