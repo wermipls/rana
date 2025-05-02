@@ -10,7 +10,7 @@ namespace audio {
 
 using std::min, std::max, std::pow, std::fmod, std::abs, std::copysign, std::isnan;
 
-class Effect : public Serializable {
+class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
     virtual void setParam(int index, float value) = 0;
@@ -22,7 +22,7 @@ public:
     virtual ~Effect() = default;
 
     virtual bool isSerializable() { return false; }
-    virtual void serialize(Serializer &s) { (void)s; }
+    void serialize(Serializer &s) { (void)s; }
 };
 
 class Filter1Pole : public Effect {

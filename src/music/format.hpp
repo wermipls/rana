@@ -31,7 +31,7 @@ enum class Codec : uint8_t {
 // negative = global sample pool
 typedef int32_t SampleDataID;
 
-struct SampleData : public Serializable {
+struct SampleData {
     Codec codec;
     // those fields are only relevant for opus
     float sr = 48000;
@@ -43,7 +43,7 @@ struct SampleData : public Serializable {
     std::string name;
 #endif
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.int8((uint8_t *)&codec);
         if (codec == Codec::Opus) {
@@ -55,7 +55,7 @@ struct SampleData : public Serializable {
     }
 };
 
-struct Sample : public Serializable {
+struct Sample {
     float volume;
     float pan;
     int8_t transpose;
@@ -66,7 +66,7 @@ struct Sample : public Serializable {
     uint32_t loop_end;
     SampleDataID sampledata_id;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.float32(&volume);
         s.float32(&pan);
@@ -80,14 +80,14 @@ struct Sample : public Serializable {
     }
 };
 
-struct ADSR : public Serializable {
+struct ADSR {
     float attack  = 0.0;
     float hold    = 0.0;
     float decay   = 0.0;
     float sustain = 1.0;
     float release = 1.0;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.float32(&attack);
         s.float32(&hold);
@@ -97,11 +97,11 @@ struct ADSR : public Serializable {
     }
 };
 
-struct Instrument : public Serializable {
+struct Instrument {
     std::vector<Sample> smp;
     ADSR adsr_volume;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         uint32_t size = smp.size();
         s.int32(&size);
@@ -126,11 +126,11 @@ enum class EffectType : uint8_t {
     Biquad,
 };
 
-struct Effect : public Serializable {
+struct Effect {
     EffectType type;
     std::vector<float> param;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.int8((uint8_t *)&type);
 
@@ -143,7 +143,7 @@ struct Effect : public Serializable {
     }
 };
 
-struct MixerTrack : public Serializable {
+struct MixerTrack {
     std::string name;
     uint8_t columns;
     float volume;
@@ -151,7 +151,7 @@ struct MixerTrack : public Serializable {
 
     std::vector<Effect> fx;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.string8(name);
         s.int8(&columns);
@@ -167,12 +167,12 @@ struct MixerTrack : public Serializable {
     }
 };
 
-struct Mixer : public Serializable {
+struct Mixer {
     std::vector<MixerTrack> tracks;
     std::vector<Effect> master_fx;
     float master_volume;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.float32(&master_volume);
 
@@ -254,11 +254,11 @@ struct PatternChannel {
     }
 };
 
-struct Pattern : public Serializable {
+struct Pattern {
     std::vector<PatternChannel> ch;
     uint16_t lines;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         uint8_t size = ch.size();
         s.int8(&size);
@@ -271,7 +271,7 @@ struct Pattern : public Serializable {
     }
 };
 
-struct Song : public Serializable {
+struct Song {
     float bpm;
     uint8_t beat_lines;
     uint8_t line_ticks;
@@ -283,7 +283,7 @@ struct Song : public Serializable {
     uint8_t loop_end;
     std::vector<SampleData> sampledata;
 
-    virtual void serialize(Serializer &s)
+    void serialize(Serializer &s)
     {
         s.float32(&bpm);
         s.int8(&beat_lines);

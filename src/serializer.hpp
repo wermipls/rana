@@ -8,12 +8,6 @@ namespace rana {
 
 class Serializer;
 
-class Serializable {
-public:
-    virtual void serialize(Serializer &s) = 0;
-    virtual ~Serializable() = default;
-};
-
 class Serializer {
     bool reading;
     std::vector<uint8_t> buffer;
