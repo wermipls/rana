@@ -123,7 +123,7 @@ class MusicSampler {
     void updateVibrato(float deltatime)
     {
         vibrato_phase += vibrato_speed * pi * 2.0f * deltatime;
-        vibrato_current = 1 + std::sin(vibrato_phase) * vibrato_intensity;
+        vibrato_current = 1.0f / (1.0f + std::sin(vibrato_phase) * vibrato_intensity);
         //log::info("p %f in %f sp %f cur %f", vibrato_phase, vibrato_intensity, vibrato_speed, vibrato_current);
     }
 
