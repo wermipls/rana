@@ -83,7 +83,7 @@ Context::Context(const char *title, int w, int h)
         throw Exception("invalid width/height");
     }
 
-    if (int error = SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         throw Exception(err("failed to initialize video subsystem: ") + SDL_GetError());
     }
 
