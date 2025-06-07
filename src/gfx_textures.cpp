@@ -59,20 +59,26 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
 
     int w_new = w;
     int h_new = h;
+    int w_prev;
+    int h_prev;
     unsigned char *s = nullptr;
+    //unsigned char *prev_buf = nullptr;
     int lv;
     for (lv = 1; ; lv++) {
+        w_prev = w_new;
+        h_prev = h_new;
         w_new /= 2;
         h_new /= 2;
         if (!(w_new && h_new)) {
             break;
         }
 
-        auto newbuf = stbir_resize_uint8_srgb(buf, w, h, w*ch, s, w_new, h_new, w_new*ch,
+        auto newbuf = stbir_resize_uint8_srgb(s ? s : buf, w_prev, h_prev, w_prev*ch, s, w_new, h_new, w_new*ch,
                                               ch == 4 ? STBIR_RGBA : STBIR_RGB);
         if (!newbuf) {
             break;
         }
+
         s = newbuf;
         glTexImage2D(
             GL_TEXTURE_2D, lv, internal_format, w_new, h_new, 0, format, GL_UNSIGNED_BYTE, s
