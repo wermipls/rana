@@ -49,6 +49,9 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
     #define GL_TEXTURE_MAX_ANISOTROPY_EXT     0x84FE
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16); // FIXME
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     if ((ch != 3) && (ch != 4)) {
         glGenerateMipmap(GL_TEXTURE_2D);
         return tex;
