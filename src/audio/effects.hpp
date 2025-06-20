@@ -232,6 +232,7 @@ class Distortion : public Effect {
 
     static constexpr float gain_multi = 127;
     enum Mode {
+        Hardclip,
         Softclip,
         Shape,
         Fold,
@@ -260,7 +261,7 @@ public:
 
     void setMode(float value)
     {
-        int i = value * 3;
+        int i = value * 4;
         mode = (Mode)i;
     }
 
@@ -286,13 +287,32 @@ public:
         ZoneScopedN("Distortion");
         switch (mode) 
         {
-        case Softclip:
+        case Hardclip:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
                 in[i].l = old.l * dry + max(min(in[i].l * gain, 1.0f), -1.0f) * wet;
                 in[i].r = old.r * dry + max(min(in[i].r * gain, 1.0f), -1.0f) * wet;
             }
             break;
+        case Softclip: {
+            constexpr auto a = -1.42479f;
+            constexpr auto b =  2.20888f;
+            constexpr auto c = -1.02786f;
+            constexpr auto d =  1.13379f;
+            for (size_t i = 0; i < n; i++) {
+                auto old = in[i];
+                auto ls = copysign(1.0f, in[i].l);
+                auto rs = copysign(1.0f, in[i].r);
+
+                SampleStereo x = {
+                    min(1.0f, abs(in[i].l) * gain),
+                    min(1.0f, abs(in[i].r) * gain)
+                };
+                in[i].l = old.l * dry + (x.l*x.l*x.l*x.l*a + x.l*x.l*x.l*b + x.l*x.l*c + x.l*d) * ls * wet;
+                in[i].r = old.r * dry + (x.r*x.r*x.r*x.r*a + x.r*x.r*x.r*b + x.r*x.r*c + x.r*d) * rs * wet;
+            }
+            break;
+        }
         case Shape:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
