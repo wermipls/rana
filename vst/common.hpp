@@ -103,10 +103,10 @@ void VstEffect::getParameterName(VstInt32 index, char *label)
 void VstEffect::getParameterDisplay(VstInt32 index, char *text) 
 {
     if ((uint32_t)index >= fx->params.size()) return;
-    auto &p = fx->params[index];
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
     fx->vstParamFmt(index, text);
 #else
+    auto &p = fx->params[index];
     snprintf(text, kVstMaxParamStrLen, "%f", p.value);
 #endif
 }
