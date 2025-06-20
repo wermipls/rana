@@ -1,3 +1,4 @@
+#define RANA_SUPERFLUOUS_VST_PARAMS
 #include "common.hpp"
 
 using namespace rana::audio;
@@ -9,7 +10,7 @@ struct EffectImpl : public EffectWrapper {
     {
         params.push_back({"mode", 0.0});
         params.push_back({"cutoff", 0.5});
-        params.push_back({"q", 0.0});
+        params.push_back({"q", 0.2729});
         params.push_back({"gain", 0.5});
         fx = Biquad();
     }
@@ -18,6 +19,18 @@ struct EffectImpl : public EffectWrapper {
     {
         params[index].value = value;
         fx.setParam(index, value);
+    }
+
+    bool vstParamFmt(int index, char *str)
+    {
+        fx.getParamFmt(index, str);
+        return true;
+    }
+
+    bool vstParamLabel(int index, char *str)
+    {
+        fx.getParamLabel(index, str);
+        return true;
     }
 
     std::vector<SampleStereo> process(std::vector<SampleStereo> in)

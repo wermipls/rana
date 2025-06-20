@@ -24,6 +24,8 @@ struct EffectWrapper {
 
     virtual std::vector<rana::audio::SampleStereo> process(std::vector<rana::audio::SampleStereo> in) = 0;
     virtual void vstSetParam(int index, float value) = 0;
+    virtual bool vstParamFmt(int index, char *str) { return false; }
+    virtual bool vstParamLabel(int index, char *str) { return false; }
     virtual ~EffectWrapper() = default;
 };
 
@@ -102,13 +104,21 @@ void VstEffect::getParameterDisplay(VstInt32 index, char *text)
 {
     if ((uint32_t)index >= fx->params.size()) return;
     auto &p = fx->params[index];
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    fx->vstParamFmt(index, text);
+#else
     snprintf(text, kVstMaxParamStrLen, "%f", p.value);
+#endif
 }
 
 void VstEffect::getParameterLabel(VstInt32 index, char *label) 
 {
     if ((uint32_t)index >= fx->params.size()) return;
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    fx->vstParamLabel(index, label);
+#else
     vst_strncpy(label, "", kVstMaxParamStrLen);
+#endif
 }
 
 AudioEffect *createEffectInstance(audioMasterCallback audioMaster) 

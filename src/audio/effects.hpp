@@ -4,6 +4,10 @@
 #include "freeverb/freeverb.h"
 #include "serializer.hpp"
 #include <tracy/Tracy.hpp>
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    #include <stdio.h>
+    #include <string.h>
+#endif
 
 namespace rana {
 namespace audio {
@@ -63,6 +67,18 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
+
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    inline void getParamFmt(int index, char *str) {
+        auto hz = std::acos(1 - coeff*coeff / (2-2*coeff)) * sr / (2 * pi);
+        if (std::isnormal(hz)) {
+            snprintf(str, 8, "%f", hz);
+        } else {
+            snprintf(str, 8, "> %f", sr/2);
+        }
+    }
+    static inline void getParamLabel(int index, char *str) { strncpy(str, "Hz", 8); }
+#endif
 
     virtual void setParam(int index, float value)
     {
@@ -206,6 +222,21 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    inline void getParamFmt(int index, char *str) {
+        switch (index) {
+            default: snprintf(str, 8, "%f", params[index]); break;
+            case 3: snprintf(str, 8, "%f", params[3] * max_delay_seconds * 1000.0); break;
+        }
+    }
+    static inline void getParamLabel(int index, char *str) {
+        switch (index) {
+            default: str[0] = 0; break;
+            case 3: strncpy(str, "ms", 8); break;
+        }
+    }
+#endif
+
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Delay");
@@ -281,6 +312,28 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
+
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    inline void getParamFmt(int index, char *str) {
+        const char *mode_str[] = {
+            "Hardclip",
+            "Softclip",
+            "Shape",
+            "Fold",
+            "BadFold"
+        };
+        switch (index) {
+            default: snprintf(str, 8, "%f", params[index]); break;
+            case 0: snprintf(str, 8, "%f", gain); break;
+            case 2: snprintf(str, 8, "%s", mode_str[mode]); break;
+        }
+    }
+    static inline void getParamLabel(int index, char *str) {
+        switch (index) {
+            default: str[0] = 0; break;
+        }
+    }
+#endif
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -423,6 +476,21 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
+
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    inline void getParamFmt(int index, char *str) {
+        switch (index) {
+            case 0: snprintf(str, 8, "%d", bits); break;
+            case 1: snprintf(str, 8, "%f", rate); break;
+        }
+    }
+    static inline void getParamLabel(int index, char *str) {
+        switch (index) {
+            case 0: strncpy(str, "bits", 8); break;
+            case 1: strncpy(str, "Hz", 8); break;
+        }
+    }
+#endif
 
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -717,6 +785,43 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
+
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    inline void getParamFmt(int index, char *str)
+    {
+        switch (index) {
+            case 0: {
+                const char *modestr[] = {
+                    "None",
+                    "Lowpass",
+                    "Highpass",
+                    "Bandpass",
+                    "FixedBandpass",
+                    "Notch",
+                    "Allpass",
+                    "Peaking",
+                    "LowShelf",
+                    "HighShelf",
+                };
+                snprintf(str, 8, modestr[mode]);
+                break;
+            }
+            case 1: snprintf(str, 8, "%f", cutoff); break;
+            case 2: snprintf(str, 8, "%f", q); break;
+            case 3: snprintf(str, 8, "%f", gain_db); break;
+        }
+    }
+
+    static inline void getParamLabel(int index, char *str)
+    {
+        switch (index) {
+            case 0: strncpy(str, "", 8); break;
+            case 1: strncpy(str, "Hz", 8); break;
+            case 2: strncpy(str, "Q", 8); break;
+            case 3: strncpy(str, "dB", 8); break;
+        }
+    }
+#endif
 
     virtual void setParam(int index, float value)
     {
