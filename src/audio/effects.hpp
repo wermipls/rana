@@ -680,10 +680,10 @@ public:
             case None:
                 coeff.a0 = 1.0;
                 coeff.a1 = 0.0;
-                coeff.a2 = 1.0;
+                coeff.a2 = 0.0;
                 coeff.b0 = 1.0;
                 coeff.b1 = 0.0;
-                coeff.b2 = 1.0;
+                coeff.b2 = 0.0;
                 break;
             case Lowpass:
                 coeff.b1 = 1.0f - fcos;
@@ -758,9 +758,6 @@ public:
                 coeff.a2 =                 gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
                 break;
         }
-
-        // important: we invert a0 so we can do filter processing without divisions
-        coeff.a0 = 1.0f / coeff.a0;
 
         // final failsafe
         // just to be safe and avoid poisoning processing loop
@@ -845,15 +842,15 @@ public:
             SampleStereo y;
             const auto x = in[i];
             // pass 1
-            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) * c.a0;
-            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) * c.a0;
+            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) / c.a0;
+            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) / c.a0;
             c.y2 = c.y1;
             c.y1 = y;
             c.x2 = c.x1;
             c.x1 = in[i];
             // pass 2
-            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) * c.a0;
-            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) * c.a0;
+            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) / c.a0;
+            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) / c.a0;
             c.y2 = c.y1;
             c.y1 = y;
             c.x2 = c.x1;
