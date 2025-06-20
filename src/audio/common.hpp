@@ -42,5 +42,33 @@ static inline SampleStereo pan_equal_power(float pan)
     };
 }
 
+struct Rampable {
+    float current;
+    float target;
+    float coef;
+
+    Rampable(float initial_value, Hz sr, Hz ramping_frequency = 100) {
+        target = current = initial_value;
+        setCoefficient(sr, ramping_frequency);
+    }
+
+    inline void setCoefficient(Hz sr, Hz freq) {
+        coef = derive_1pole_factor(normalize_frequency(freq, sr));
+    }
+    inline void set(float x) { target = x; }
+    inline void setInstant(float x) { target = current = x; }
+    inline float step() {
+        // do calculation on doubles so we can settle much closer to the target value
+        return current = current + ((double)target - current) * coef;
+    }
+    inline bool hasSettled() {
+        auto n = current + ((double)target - current) * coef;
+        return (float)n == current; 
+    }
+
+    inline float operator()() { return step(); }
+    inline float operator=(float rhs) { return target = rhs; }
+};
+
 }
 }

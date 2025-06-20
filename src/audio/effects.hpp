@@ -642,9 +642,9 @@ public:
         LowShelf,
         HighShelf,
     } mode = Lowpass;
-    float cutoff = 5000.0f;
-    float q = 0.5;
-    float gain_db = 0.0;
+    Rampable cutoff;
+    Rampable q;
+    Rampable gain_db;
 
     static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
     {
@@ -773,9 +773,12 @@ public:
     }
 
     Biquad(Hz sample_rate = 44100)
+        : cutoff(5000, sample_rate)
+        , q(0.5, sample_rate)
+        , gain_db(0, sample_rate)
     {
         sr = sample_rate;
-        recalculateCoeffs(c, sr, mode, cutoff, q, gain_db);
+        recalculateCoeffs(c, sr, mode, cutoff.current, q.current, gain_db.current);
     }
 
     virtual const char *getName() { return "Biquad"; }
@@ -803,9 +806,9 @@ public:
                 snprintf(str, 8, modestr[mode]);
                 break;
             }
-            case 1: snprintf(str, 8, "%f", cutoff); break;
-            case 2: snprintf(str, 8, "%f", q); break;
-            case 3: snprintf(str, 8, "%f", gain_db); break;
+            case 1: snprintf(str, 8, "%f", cutoff.target); break;
+            case 2: snprintf(str, 8, "%f", q.target); break;
+            case 3: snprintf(str, 8, "%f", gain_db.target); break;
         }
     }
 
@@ -826,19 +829,24 @@ public:
         params[index] = value;
 
         switch (index) {
-            case 0: mode = Mode(value * (float)Mode::HighShelf); break;
+            case 0: mode = Mode(value * (float)Mode::HighShelf);
+                    recalculateCoeffs(c, sr, mode, cutoff.current, q.current, gain_db.current);
+                    break;
             case 1: cutoff = pow(value, 3) * (22050.0f - 20.f) + 20.0f; break;
             case 2: q = pow(value, 3) * 29.9f + 0.1f; break;
             case 3: gain_db = -24.0f + value * 48.0f; break;
         }
-
-        recalculateCoeffs(c, sr, mode, cutoff, q, gain_db);
     }
 
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Biquad");
         for (size_t i = 0; i < n; i++) {
+            // recalculating coeffs is more expensive than just checking if the values are stable
+            if (!cutoff.hasSettled() || !q.hasSettled() || !gain_db.hasSettled()){
+                recalculateCoeffs(c, sr, mode, cutoff(), q(), gain_db());
+            }
+
             SampleStereo y;
             const auto x = in[i];
             // pass 1
