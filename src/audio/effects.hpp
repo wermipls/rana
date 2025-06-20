@@ -265,6 +265,7 @@ class Distortion : public Effect {
     enum Mode {
         Hardclip,
         Softclip,
+        Softsine,
         Shape,
         Fold,
         BadFold,
@@ -292,7 +293,7 @@ public:
 
     void setMode(float value)
     {
-        int i = value * 4;
+        int i = value * (float)BadFold;
         mode = (Mode)i;
     }
 
@@ -318,6 +319,7 @@ public:
         const char *mode_str[] = {
             "Hardclip",
             "Softclip",
+            "Softsine",
             "Shape",
             "Fold",
             "BadFold"
@@ -366,6 +368,17 @@ public:
             }
             break;
         }
+        case Softsine:
+            for (size_t i = 0; i < n; i++) {
+                auto old = in[i];
+                SampleStereo x = {
+                    min(1.0f, max(-1.0f, in[i].l * gain / (float)sqrt2)),
+                    min(1.0f, max(-1.0f, in[i].r * gain / (float)sqrt2))
+                };
+                in[i].l = old.l * dry + sin(x.l * pi / 2.0f) * wet;
+                in[i].r = old.r * dry + sin(x.r * pi / 2.0f) * wet;
+            }
+            break;
         case Shape:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];

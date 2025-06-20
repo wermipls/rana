@@ -6,6 +6,7 @@ namespace rana {
 namespace audio {
 
 constexpr double pi = 3.14159265358979323846;
+constexpr double sqrt2 = 1.4142135623730950488016887242097;
 typedef double Hz;
 
 struct SampleStereo {
