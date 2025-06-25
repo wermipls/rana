@@ -375,8 +375,8 @@ public:
                     min(1.0f, max(-1.0f, in[i].l * gain / (float)sqrt2)),
                     min(1.0f, max(-1.0f, in[i].r * gain / (float)sqrt2))
                 };
-                in[i].l = old.l * dry + sin(x.l * pi / 2.0f) * wet;
-                in[i].r = old.r * dry + sin(x.r * pi / 2.0f) * wet;
+                in[i].l = old.l * dry + fast_sin_halfpi(x.l) * wet;
+                in[i].r = old.r * dry + fast_sin_halfpi(x.r) * wet;
             }
             break;
         case Shape:

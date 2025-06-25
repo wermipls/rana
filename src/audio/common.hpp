@@ -71,5 +71,24 @@ struct Rampable {
     inline float operator=(float rhs) { return target = rhs; }
 };
 
+// approximates sin(x*pi/2) over [-1, 1]
+static double fast_sin_halfpi(double x)
+{
+    // ./lolremez --degree 5 --range "1e-50:1" "sin(sqrt(x)*pi/2)/(sqrt(x))" "1/(sqrt(x)*pi/2)" --double
+    // Degree 5 approximation of f(x) = sin(sqrt(x)*pi/2)/(sqrt(x))
+    // with weight function g(x) = 1/(sqrt(x)*pi/2)
+    // on interval [ 1e-50, 1 ]
+    // p(x)=((((-3.4182130525186867e-6*x+1.6021724634303529e-4)*x-4.6816203508015543e-3)*x+7.9692587335035602e-2)*x-6.459640926526981e-1)*x+1.5707963266218764
+    // Estimated max error: 2.0887105564869357e-11
+    auto x2 = x*x;
+    double u = -3.4182130525186866e-06;
+    u = u * x2 + 0.00016021724634303529;
+    u = u * x2 + -0.0046816203508015545;
+    u = u * x2 + 0.079692587335035606;
+    u = u * x2 + -0.64596409265269805;
+    u = u * x2 + 1.5707963266218763;
+    return u * x;
+}
+
 }
 }
