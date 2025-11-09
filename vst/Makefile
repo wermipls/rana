@@ -6,7 +6,8 @@ SRC = $(wildcard *.cpp)
 HEADERS = $(wildcard *.hpp)
 BIN = $(addprefix bin/rana,$(SRC:.cpp=.dll))
 
-CFLAGS = -shared -static-libgcc -static -Ofast \
+CFLAGS = -shared -static-libgcc -static -O3 \
+         -fno-math-errno \
          -Wall -Wno-narrowing -Wno-write-strings \
 		 -Wno-stringop-truncation \
          -DPLUGIN_VENDOR=\""$(PLUGIN_VENDOR)"\" \
@@ -16,7 +17,7 @@ all: $(BIN)
 freeverb.o: ../src/audio/freeverb/freeverb.c
 	$(CC) $^ -Ofast -c -o freeverb.o
 
-bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp Makefile freeverb.o
+bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp ../src/audio/common.hpp Makefile freeverb.o
 	mkdir -p bin
 	$(CXX) $< $(SRC_AUX) freeverb.o -I../src -I../tracy/public -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
 
