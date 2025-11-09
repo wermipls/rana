@@ -32,11 +32,15 @@ Note Off events always cause a brief fadeout, implemented with a 1-tap filter. T
 
 There's an "auto fade" option, which applies a fade in+out to a sample. The 1-tap fadeout starts 12ms before the end of the sample, and settles at about -72dB at the last sample. Fade in seems to use a similar coefficient.
 
-The maximum number of sample voices an instrument can play on a single note column (think release tails, or NNA of `Continue`) is 12. The sample voices are shared across the entire instrument, so if you e.g. have 12 different samples playing in an instrument at the same time, it essentially turns monophonic.^[It also has a funny consequence: if an instrument has more than 12 samples assigned to the same note, a note event will only play the 12 last ones. "imagine someone doing manual additive synthesis in renoise with the sampler and getting mad at this"] This is easy to implement and simplifies channel state allocation.
+The maximum number of sample voices an instrument can play on a single note column (think release tails, or NNA of `Continue`) is 12. The sample voices are shared across the entire instrument, so if you e.g. have 12 different samples playing in an instrument at the same time, it essentially turns monophonic.[^1] This is easy to implement and simplifies channel state allocation.
+
+[^1]: It also has a funny consequence: if an instrument has more than 12 samples assigned to the same note, a note event will only play the 12 last ones. "imagine someone doing manual additive synthesis in renoise with the sampler and getting mad at this"
 
 ## Modulation
 
-Modulation appears to be processed at intervals of 1/256th of the tempo (so e.g. for 120BPM, modulation gets processed at a rate of 512 Hz). `Volume`, `Panning`, and `Drive` are ramped linearly between points. `Cutoff` and `Resonance` appear to use some single-tap smoothing coeffecient instead^[This may be inherent to the filters themselves, rather than the modulation system. However, the coefficient present in the `Analog Filter` effect is different and smoothes parameters much more aggresively, even at the "Instant" inertia setting.]. `Pitch` is not interpolated at all.
+Modulation appears to be processed at intervals of 1/256th of the tempo (so e.g. for 120BPM, modulation gets processed at a rate of 512 Hz). `Volume`, `Panning`, and `Drive` are ramped linearly between points. `Cutoff` and `Resonance` appear to use some single-tap smoothing coeffecient instead[^2]. `Pitch` is not interpolated at all.
+
+[^2]: This may be inherent to the filters themselves, rather than the modulation system. However, the coefficient present in the `Analog Filter` effect is different and smoothes parameters much more aggresively, even at the "Instant" inertia setting.
 
 Modulation devices modulate the input with an operand of choice. Since division is available, it's possible to reach values such as infinity (positive and negative) and NaN. By the end of the modulation chain, infinity (regardless of sign) gets substituted with max value, while NaN gets substituted by zero. The values always get clamped. The range is 0 to 1.0 for `Cutoff`, `Resonance` and `Drive`. For `Panning` and `Pitch`, the range is instead -1.0 to 1.0. Volumes range from 0.0 to 4.0 (about +24.08dB). There is a limit of 12 modulation devices per target.
 
@@ -74,7 +78,9 @@ $$y=-1.15841x^{4}+3.26702x^{3}-2.86373x^{2}+0.0513749x+1.04762$$
 
 ## Volume column
 
-Volume changes in pattern editor always get smoothed. The 1-tap smoothing coefficient for immediate change is tuned to about 27.5 Hz.^[Likely the same for panning, but untested.] There is another, faster coefficient, identical to the declick one. Coefficient is set to a "fast" one by most of volume effects. The coefficient resets to the "slow" one on the start of a line.
+Volume changes in pattern editor always get smoothed. The 1-tap smoothing coefficient for immediate change is tuned to about 27.5 Hz.[^3] There is another, faster coefficient, identical to the declick one. Coefficient is set to a "fast" one by most of volume effects. The coefficient resets to the "slow" one on the start of a line.
+
+[^3]: Likely the same for panning, but untested.
 
 Volume increments are in 1/127ths. `80h` is identical to `7Fh`.
 
@@ -189,7 +195,9 @@ Vibrato gets updated on tick boundaries, but speed is NOT dependent on tickrate.
 
 #### Speed quirk
 
-Preliminary testing suggested that the period is based on $4\pi \approx 12.566$, but measurements instead seem to point towards a figure of approximately $12.446$. It's unclear where the deviation comes from.^[![Pi... Isn't 3 good enough?](pi.jpg)]
+Preliminary testing suggested that the period is based on $4\pi \approx 12.566$, but measurements instead seem to point towards a figure of approximately $12.446$. It's unclear where the deviation comes from.[^4]
+
+[^4]: ![Pi... Isn't 3 good enough?](pi.jpg) 
 
 ### Fade in (Ixx) and out (Oxx)
 
@@ -278,7 +286,9 @@ If combined with sample offset and the offset lands past the loop start, the sam
 
 Retriggers selected envelope devices from a given offset. The retrigger applies to **every single device** in a modulation set.
 
-For AHDSR, Envelope and Fader, the offset is `xx` 1/256ths^[TODO: needs formal validation if its 1/255 or 1/256] of total modulation length (excluding `Release` for envelopes and AHDSR).
+For AHDSR, Envelope and Fader, the offset is `xx` 1/256ths[^5] of total modulation length (excluding `Release` for envelopes and AHDSR).
+
+[^5]: TODO: needs formal validation if its 1/255 or 1/256
 
 TODO: Figure out what happens if you restart modulation after a sample already stops playing (release over, etc)
 
