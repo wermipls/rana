@@ -272,7 +272,7 @@ int rana_main(int argc, char **argv)
                 if (SDL_GetGamepadFromID(gde->which) == current_gamepad) {
                     rana::log::info("lost current gamepad :(");
                     SDL_CloseGamepad(current_gamepad);
-                    enumerated_gamepads = {};
+                    enumerated_gamepads = {}; // FIXME: why? shouldn't it just remove the removed one?
                     current_gamepad = nullptr;
                 }
                 break;
