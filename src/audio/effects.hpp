@@ -868,16 +868,16 @@ public:
             c.y2 = c.y1;
             c.y1 = y;
             c.x2 = c.x1;
-            c.x1 = in[i];
+            c.x1 = x;
             // pass 2
             y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) / c.a0;
             y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) / c.a0;
             c.y2 = c.y1;
             c.y1 = y;
             c.x2 = c.x1;
-            c.x1 = in[i];
-            in[i].l = (y.l + c.y1.l) * 0.5f;
-            in[i].r = (y.r + c.y1.r) * 0.5f;
+            c.x1 = x;
+            in[i].l = (y.l + c.y2.l) * 0.5f;
+            in[i].r = (y.r + c.y2.r) * 0.5f;
         }
     }
 };
