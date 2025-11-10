@@ -666,27 +666,7 @@ public:
         float fcos = cos(nf);
         auto gain = pow(10.0f, gain_db / 40.0f);
 
-        float a;
-        switch (mode) {
-            default:
-            case Lowpass:
-            case Highpass:
-            case Bandpass:
-            case FixedBandpass:
-            case Notch:
-            case Allpass:
-            case Peaking:
-                a = fsin / (2.0f * q);
-                break;
-            case LowShelf:
-            case HighShelf:
-                a = sqrt(1.0f / (q * q)) * fsin * gain / 2.0f;
-                if (std::isnan(a)) {
-                    a = 0;
-                }
-                a = max(a, 0.01f); // prevent excessive resonance
-                break;
-        }
+        float a = fsin / (2.0f * q);
 
         switch (mode) {
             default:
