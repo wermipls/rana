@@ -661,7 +661,9 @@ public:
 
     static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
     {
-        float nf = 2.0f * pi * cutoff / (sr * 2.0f); // 2x oversample
+        // cutoff must be below sr/2 or else the filter will explode.
+        cutoff = std::min(cutoff, sr * 0.4999f);
+        float nf = 2.0f * pi * cutoff / sr;
         float fsin = sin(nf);
         float fcos = cos(nf);
         auto gain = pow(10.0f, gain_db / 40.0f);
@@ -763,6 +765,12 @@ public:
             coeff.b1 = 0.0;
             coeff.b2 = 1.0;
         }
+
+        coeff.b0 /= coeff.a0;
+        coeff.b1 /= coeff.a0;
+        coeff.b2 /= coeff.a0;
+        coeff.a1 /= coeff.a0;
+        coeff.a2 /= coeff.a0;
     }
 
     Biquad(Hz sample_rate = 44100)
@@ -842,22 +850,13 @@ public:
 
             SampleStereo y;
             const auto x = in[i];
-            // pass 1
-            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) / c.a0;
-            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) / c.a0;
-            c.y2 = c.y1;
-            c.y1 = y;
-            c.x2 = c.x1;
-            c.x1 = x;
-            // pass 2
-            y.l = (c.b0 * x.l + c.b1 * c.x1.l + c.b2 * c.x2.l - c.a1 * c.y1.l - c.a2 * c.y2.l) / c.a0;
-            y.r = (c.b0 * x.r + c.b1 * c.x1.r + c.b2 * c.x2.r - c.a1 * c.y1.r - c.a2 * c.y2.r) / c.a0;
-            c.y2 = c.y1;
-            c.y1 = y;
-            c.x2 = c.x1;
-            c.x1 = x;
-            in[i].l = (y.l + c.y2.l) * 0.5f;
-            in[i].r = (y.r + c.y2.r) * 0.5f;
+            y.l = c.y1.l + c.b0 * x.l;
+            y.r = c.y1.r + c.b0 * x.r;
+            c.y1.l = c.y2.l + c.b1 * x.l - c.a1 * y.l;
+            c.y1.r = c.y2.r + c.b1 * x.r - c.a1 * y.r;
+            c.y2.l = c.b2 * x.l - c.a2 * y.l;
+            c.y2.r = c.b2 * x.r - c.a2 * y.r;
+            in[i] = y;
         }
     }
 };
