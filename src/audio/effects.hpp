@@ -95,15 +95,12 @@ public:
         ZoneScopedN("Filter1Pole");
         if (highpass) {
             for (size_t i = 0; i < n; i++) {
-                q.l += (in[i].l - q.l) * coeff;
-                q.r += (in[i].r - q.r) * coeff;
-                in[i].l -= q.l;
-                in[i].r -= q.r;
+                q += (in[i] - q) * coeff;
+                in[i] -= q;
             }
         } else {
             for (size_t i = 0; i < n; i++) {
-                q.l += (in[i].l - q.l) * coeff;
-                q.r += (in[i].r - q.r) * coeff;
+                q += (in[i] - q) * coeff;
                 in[i] = q;
             }
         }
@@ -185,8 +182,7 @@ public:
         buffer_size = sample_rate * max_delay_seconds;
         buffer = new SampleStereo[buffer_size];
         for (size_t i = 0; i < buffer_size; i++) {
-            buffer[i].l = 0;
-            buffer[i].r = 0;
+            buffer[i] = 0;
         }
 
         setDelay(0.2);
@@ -244,10 +240,8 @@ public:
             buffer_pos++;
             buffer_pos = buffer_pos % delay_size;
             auto delay_sample = buffer[buffer_pos];
-            buffer[buffer_pos].l = in[i].l + delay_sample.l * feedback;
-            buffer[buffer_pos].r = in[i].r + delay_sample.r * feedback; 
-            in[i].l = in[i].l * dry + delay_sample.l * wet;
-            in[i].r = in[i].r * dry + delay_sample.r * wet;
+            buffer[buffer_pos] = in[i] + delay_sample * feedback;
+            in[i] = in[i] * dry + delay_sample * wet;
         }
     }
 };
@@ -618,8 +612,7 @@ public:
             volume_target = from_dB(target_db);
             volume_target *= makeup;
             processVolume();
-            in[i].l *= volume_actual;
-            in[i].r *= volume_actual;
+            in[i] *= volume_actual;
         }
     }
 };
@@ -850,12 +843,9 @@ public:
 
             SampleStereo y;
             const auto x = in[i];
-            y.l = c.y1.l + c.b0 * x.l;
-            y.r = c.y1.r + c.b0 * x.r;
-            c.y1.l = c.y2.l + c.b1 * x.l - c.a1 * y.l;
-            c.y1.r = c.y2.r + c.b1 * x.r - c.a1 * y.r;
-            c.y2.l = c.b2 * x.l - c.a2 * y.l;
-            c.y2.r = c.b2 * x.r - c.a2 * y.r;
+            y = c.y1 + c.b0 * x;
+            c.y1 = c.y2 + c.b1 * x - c.a1 * y;
+            c.y2 = c.b2 * x - c.a2 * y;
             in[i] = y;
         }
     }
@@ -977,8 +967,7 @@ public:
             samples_until_next--;
             time_since_trigger += 1.0f / sr;
             time_since_release += 1.0f / sr;
-            in[i].l *= volume;
-            in[i].r *= volume;
+            in[i] *= volume;
         }
     }
 };

@@ -11,6 +11,33 @@ typedef double Hz;
 
 struct SampleStereo {
     float l, r;
+
+    SampleStereo operator+(SampleStereo rhs) { return { l + rhs.l, r + rhs.r }; }
+    SampleStereo operator-(SampleStereo rhs) { return { l - rhs.l, r - rhs.r }; }
+    SampleStereo operator*(SampleStereo rhs) { return { l * rhs.l, r * rhs.r }; }
+    SampleStereo operator/(SampleStereo rhs) { return { l / rhs.l, r / rhs.r }; }
+
+    SampleStereo operator+(float rhs) { return { l + rhs, r + rhs }; }
+    SampleStereo operator-(float rhs) { return { l - rhs, r - rhs }; }
+    SampleStereo operator*(float rhs) { return { l * rhs, r * rhs }; }
+    SampleStereo operator/(float rhs) { return { l / rhs, r / rhs }; }
+
+    friend SampleStereo operator+(const float &lhs, const SampleStereo &rhs) { return { lhs + rhs.l, lhs + rhs.r }; }
+    friend SampleStereo operator-(const float &lhs, const SampleStereo &rhs) { return { lhs - rhs.l, lhs - rhs.r }; }
+    friend SampleStereo operator*(const float &lhs, const SampleStereo &rhs) { return { lhs * rhs.l, lhs * rhs.r }; }
+    friend SampleStereo operator/(const float &lhs, const SampleStereo &rhs) { return { lhs / rhs.l, lhs / rhs.r }; }
+
+    SampleStereo &operator+=(const SampleStereo &rhs) { *this = *this + rhs; return *this; }
+    SampleStereo &operator-=(const SampleStereo &rhs) { *this = *this - rhs; return *this; }
+    SampleStereo &operator*=(const SampleStereo &rhs) { *this = *this * rhs; return *this; }
+    SampleStereo &operator/=(const SampleStereo &rhs) { *this = *this / rhs; return *this; }
+
+    SampleStereo &operator+=(const float &rhs) { *this = *this + rhs; return *this; }
+    SampleStereo &operator-=(const float &rhs) { *this = *this - rhs; return *this; }
+    SampleStereo &operator*=(const float &rhs) { *this = *this * rhs; return *this; }
+    SampleStereo &operator/=(const float &rhs) { *this = *this / rhs; return *this; }
+
+    SampleStereo &operator=(const float &rhs) { this->l = rhs; this->r = rhs; return *this; }
 };
 
 static inline double normalize_frequency(Hz freq, Hz sr)
