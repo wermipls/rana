@@ -634,7 +634,6 @@ class Biquad : public Effect {
         SampleStereo y2 = {0,0};
     } c;
     enum Mode : int {
-        None,
         Lowpass,
         Highpass,
         Bandpass,
@@ -692,17 +691,10 @@ class Biquad : public Effect {
         
         const double phi_zero = (pi - a) / (pi + a);
         const double phi_inf = -1.f;
-        
-        float a1, a2, b1, b2, G;
+
+        double a1, a2, b1, b2, G;
         switch (mode) {
             default:
-            case None:
-                a1 = 1;
-                a2 = 1;
-                b1 = 1;
-                b2 = 1;
-                G = 1.f / (1 + a1 + a2);
-                break;
             case Lowpass:
                 a1 = phi_zero + phi_zero;
                 a2 = phi_zero * phi_zero;
@@ -718,7 +710,7 @@ class Biquad : public Effect {
                 G = omega*omega / (4.f*pi*pi);
                 break;
             case FixedBandpass:
-            case Bandpass:
+            case Bandpass: // FIXME
                 a1 = phi_zero + phi_inf;
                 a2 = phi_zero * phi_inf;
                 b1 = phi1(omega, damp, a);
@@ -762,7 +754,7 @@ class Biquad : public Effect {
                 break;
         }
 
-        float mul = G * (1.f + b1 + b2);
+        double mul = G * (1.f + b1 + b2);
         coeff.b0 = mul;
         coeff.b1 = mul * a1;
         coeff.b2 = mul * a2;
@@ -792,7 +784,6 @@ public:
         switch (index) {
             case 0: {
                 const char *modestr[] = {
-                    "None",
                     "Lowpass",
                     "Highpass",
                     "Bandpass",
