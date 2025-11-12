@@ -628,13 +628,10 @@ class Biquad : public Effect {
     float params[paramCount] = {};
 
     float sr;
-public:
     struct Coeffs {
         float a0, a1, a2, b0, b1, b2;
         SampleStereo y1 = {0,0};
         SampleStereo y2 = {0,0};
-        SampleStereo x1 = {0,0};
-        SampleStereo x2 = {0,0};
     } c;
     enum Mode : int {
         None,
@@ -698,6 +695,7 @@ public:
         
         float a1, a2, b1, b2, G;
         switch (mode) {
+            default:
             case None:
                 a1 = 1;
                 a2 = 1;
@@ -773,6 +771,7 @@ public:
         coeff.a2 = b2;
     }
 
+public:
     Biquad(Hz sample_rate = 44100)
         : cutoff(5000, sample_rate)
         , q(0.5, sample_rate)
