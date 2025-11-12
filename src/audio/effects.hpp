@@ -652,118 +652,125 @@ public:
     Rampable q;
     Rampable gain_db;
 
+    // https://ivantsovy.com/research/paper1.pdf
+    // FIXME: simplify all those calculations?
+    static inline double phi(double x, double a)
+    {
+        const auto sq = sqrt(x*x + a*a);
+        return (pi - sq) / (pi + sq);
+    }
+
+    static inline double v(double x, double y, double a)
+    {
+        return sqrt(x*x*x*x + 2.f*a*a*x*x * (2.f * y*y - 1.f) + a*a*a*a);
+    }
+
+    static inline double k(double x, double y, double a)
+    {
+        return x*x * (2.f * y*y - 1.f) + a*a;
+    }
+
+    static inline double phi1(double x, double y, double a)
+    {
+        auto vxy = v(x,y,a);
+        auto kxy = k(x,y,a);
+        return (2.f * pi*pi - 2 * vxy) / (pi*pi + vxy + pi * sqrt2 * sqrt(vxy + kxy));
+    }
+
+    static inline double phi2(double x, double y, double a)
+    {
+        auto vxy = v(x,y,a);
+        auto kxy = k(x,y,a);
+        return (pi*pi + vxy - pi * sqrt2 * sqrt(vxy + kxy)) / (pi*pi + vxy + pi * sqrt2 * sqrt(vxy + kxy));
+    }
+
     static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
     {
-        // cutoff must be below sr/2 or else the filter will explode.
-        cutoff = std::min(cutoff, sr * 0.4999f);
-        float nf = 2.0f * pi * cutoff / sr;
-        float fsin = sin(nf);
-        float fcos = cos(nf);
-        auto gain = pow(10.0f, gain_db / 40.0f);
-
-        float a = fsin / (2.0f * q);
-
+        const double omega = sr / cutoff;
+        const double damp = 0.5f / q;
+        const double gain = pow(10.0f, gain_db / 20.0f);
+        
+        const double ctg_pi_omega = tan(pi/2 - (pi/omega));
+        const double a = sqrt(omega*omega - pi*pi * ctg_pi_omega*ctg_pi_omega); // (2.11)
+        
+        const double phi_zero = (pi - a) / (pi + a);
+        const double phi_inf = -1.f;
+        
+        float a1, a2, b1, b2, G;
         switch (mode) {
-            default:
             case None:
-                coeff.a0 = 1.0;
-                coeff.a1 = 0.0;
-                coeff.a2 = 0.0;
-                coeff.b0 = 1.0;
-                coeff.b1 = 0.0;
-                coeff.b2 = 0.0;
+                a1 = 1;
+                a2 = 1;
+                b1 = 1;
+                b2 = 1;
+                G = 1.f / (1 + a1 + a2);
                 break;
             case Lowpass:
-                coeff.b1 = 1.0f - fcos;
-                coeff.b0 = coeff.b1 / 2.0f;
-                coeff.b2 = coeff.b0;
-                coeff.a0 = 1.0f + a;
-                coeff.a1 = -2.0f * fcos;
-                coeff.a2 = 1.0f - a;
+                a1 = phi_zero + phi_zero;
+                a2 = phi_zero * phi_zero;
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = 1.f / (1 + a1 + a2);
                 break;
             case Highpass:
-                coeff.b1 = -(1.0f + fcos);
-                coeff.b0 = -coeff.b1 / 2.0f;
-                coeff.b2 = coeff.b0;
-                coeff.a0 = 1.0f + a;
-                coeff.a1 = -2.0f * fcos;
-                coeff.a2 = 1.0f - a;
-                break;
-            case Bandpass: // FIXME
-                coeff.b0 = fsin / 2.0f;
-                coeff.b1 = 0;
-                coeff.b2 = -fsin / 2.0f;
-                coeff.a0 = 1.0f + a;
-                coeff.a1 = -2.0f * fcos;
-                coeff.a2 = 1.0f - a;
+                a1 = phi_inf + phi_inf;
+                a2 = phi_inf * phi_inf;
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = omega*omega / (4.f*pi*pi);
                 break;
             case FixedBandpass:
-                coeff.b0 = a;
-                coeff.b1 = 0;
-                coeff.b2 = -a;
-                coeff.a0 = 1.0f + a;
-                coeff.a1 = -2.0f * fcos;
-                coeff.a2 = 1.0f - a;
+            case Bandpass:
+                a1 = phi_zero + phi_inf;
+                a2 = phi_zero * phi_inf;
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = omega / (2.f * pi) * 2 * damp / (2 + a1);
                 break;
-            case Notch:
-                coeff.b0 = 1;
-                coeff.b1 = -2.0f * fcos;
-                coeff.b2 = 1;
-                coeff.a0 = 1.0f + a;
-                coeff.a1 = coeff.b1;
-                coeff.a2 = 1.0f - a;
-                break;
-            case Allpass:
-                coeff.b0 = 1.0f - a;
-                coeff.b1 = -2.0f * fcos;
-                coeff.b2 = 1.0f + a;
-                coeff.a0 = coeff.b2;
-                coeff.a1 = coeff.b1;
-                coeff.a2 = coeff.b0;
-                break;
-            case Peaking:
-                coeff.b0 = 1.0f + a * gain;
-                coeff.b1 = -2.0f * fcos;
-                coeff.b2 = 1.0f - a * gain;
-                coeff.a0 = 1.0f + a / gain;
-                coeff.a1 = coeff.b1;
-                coeff.a2 = 1.0f - a / gain;
-                break;
-            case LowShelf:
-                coeff.b0 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
-                coeff.b1 =  2.0f * gain * (gain - 1.0f - (gain + 1.0f) * fcos);
-                coeff.b2 =         gain * (gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
-                coeff.a0 =                 gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
-                coeff.a1 =        -2.0f * (gain - 1.0f + (gain + 1.0f) * fcos);
-                coeff.a2 =                 gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
+            case Notch: // or "Band Stop". simplified coefficients from (3.9)
+                a1 = -2.f * (omega*omega - a*a - pi*pi) / (omega*omega - a*a + pi*pi);
+                a2 = 1;
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = 1.f / (1 + a1 + a2);
                 break;
             case HighShelf:
-                coeff.b0 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a);
-                coeff.b1 = -2.0f * gain * (gain - 1.0f + (gain + 1.0f) * fcos);
-                coeff.b2 =         gain * (gain + 1.0f + (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a);
-                coeff.a0 =                 gain + 1.0f - (gain - 1.0f) * fcos + 2.0f * sqrt(gain) * a;
-                coeff.a1 =         2.0f * (gain - 1.0f - (gain + 1.0f) * fcos);
-                coeff.a2 =                 gain + 1.0f - (gain - 1.0f) * fcos - 2.0f * sqrt(gain) * a;
+                a1 = phi1(omega * powf(gain, 0.25f), damp, a);
+                a2 = phi2(omega * powf(gain, 0.25f), damp, a);
+                b1 = phi1(omega * powf(gain, -0.25f), damp, a);
+                b2 = phi2(omega * powf(gain, -0.25f), damp, a);
+                G = 1.f / (1 + a1 + a2);
+                break;
+            case LowShelf:
+                a1 = phi1(omega * powf(gain, -0.25f), damp, a);
+                a2 = phi2(omega * powf(gain, -0.25f), damp, a);
+                b1 = phi1(omega * powf(gain, 0.25f), damp, a);
+                b2 = phi2(omega * powf(gain, 0.25f), damp, a);
+                G = gain / (1 + a1 + a2);
+                break;
+            case Peaking:
+                a1 = phi1(omega, damp * powf(gain, 0.5f), a);
+                a2 = phi2(omega, damp * powf(gain, 0.5f), a);
+                b1 = phi1(omega, damp * powf(gain, -0.5f), a);
+                b2 = phi2(omega, damp * powf(gain, -0.5f), a);
+                G = 1.f / (1 + a1 + a2);
+                break;
+            case Allpass:
+                a1 = phi1(omega, damp, a) / phi2(omega, damp, a);
+                a2 = 1.f / phi2(omega, damp, a);
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = 1.f / (1 + a1 + a2);
                 break;
         }
 
-        // final failsafe
-        // just to be safe and avoid poisoning processing loop
-        if (isnan(coeff.a0) || isnan(coeff.a1) || isnan(coeff.a2)
-         || isnan(coeff.b0) || isnan(coeff.b1) || isnan(coeff.b2)) {
-            coeff.a0 = 1.0;
-            coeff.a1 = 0.0;
-            coeff.a2 = 1.0;
-            coeff.b0 = 1.0;
-            coeff.b1 = 0.0;
-            coeff.b2 = 1.0;
-        }
-
-        coeff.b0 /= coeff.a0;
-        coeff.b1 /= coeff.a0;
-        coeff.b2 /= coeff.a0;
-        coeff.a1 /= coeff.a0;
-        coeff.a2 /= coeff.a0;
+        float mul = G * (1.f + b1 + b2);
+        coeff.b0 = mul;
+        coeff.b1 = mul * a1;
+        coeff.b2 = mul * a2;
+        coeff.a0 = 1;
+        coeff.a1 = b1;
+        coeff.a2 = b2;
     }
 
     Biquad(Hz sample_rate = 44100)
