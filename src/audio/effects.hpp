@@ -455,7 +455,7 @@ class Bitcrush : public Effect {
 public:
     Bitcrush(float sample_rate = 44100) : sr{sample_rate}
     {
-        setRate(44100);
+        setRate(1);
     }
 
     void setBits(float value)
