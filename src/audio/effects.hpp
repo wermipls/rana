@@ -260,6 +260,7 @@ class Distortion : public Effect {
         Hardclip,
         Softclip,
         Softsine,
+        Tanh,
         Shape,
         Fold,
         BadFold,
@@ -314,6 +315,7 @@ public:
             "Hardclip",
             "Softclip",
             "Softsine",
+            "Tanh",
             "Shape",
             "Fold",
             "BadFold"
@@ -371,6 +373,13 @@ public:
                 };
                 in[i].l = old.l * dry + fast_sin_halfpi(x.l) * wet;
                 in[i].r = old.r * dry + fast_sin_halfpi(x.r) * wet;
+            }
+            break;
+        case Tanh:
+            for (size_t i = 0; i < n; i++) {
+                auto old = in[i];
+                in[i].l = old.l * dry + tanh(in[i].l * gain) * wet;
+                in[i].r = old.r * dry + tanh(in[i].r * gain) * wet;
             }
             break;
         case Shape:
