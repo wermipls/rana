@@ -19,6 +19,9 @@
 #include <tracy/Tracy.hpp>
 #include "error_handling.hpp"
 
+#include <jxl/decode_cxx.h>
+#include <jxl/resizable_parallel_runner_cxx.h>
+
 namespace rana {
 namespace gfx {
 
@@ -112,6 +115,60 @@ auto Texture::load(const char *fn) -> Texture
     std::vector<uint8_t> file;
     if (!fs::readfile(file, fn)) {
         return fallback();
+    }
+
+    auto fnsv = std::string_view(fn);
+    if (fnsv.ends_with(".jxl")) { // FIXME
+        // try jpeg xl.
+        auto dec = JxlDecoderMake(nullptr);
+
+        if (JxlDecoderSubscribeEvents(dec.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS) {
+            log::err("jxl: failed to subscribe to events");
+            return fallback();
+        }
+
+        JxlDecoderSetInput(dec.get(), file.data(), file.size());
+        JxlDecoderCloseInput(dec.get());
+
+        std::vector<uint8_t> buf;
+        auto fmt = JxlPixelFormat{4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+        JxlBasicInfo info;
+
+        for (;;) {
+            auto status = JxlDecoderProcessInput(dec.get());
+            switch (status) {
+                case JXL_DEC_ERROR: {
+                    log::err("jxl: dec fail");
+                    return fallback();
+                }
+                case JXL_DEC_NEED_IMAGE_OUT_BUFFER: {
+                    size_t bufsize;
+                    if (JxlDecoderImageOutBufferSize(dec.get(), &fmt, &bufsize) == JXL_DEC_ERROR) {
+                        log::err("jxl: failed to get image out buffer size");
+                        return fallback();
+                    }
+
+                    buf.resize(bufsize);
+                    if (JxlDecoderSetImageOutBuffer(dec.get(), &fmt, buf.data(), bufsize) == JXL_DEC_ERROR) {
+                        log::err("jxl: buf size set fail");
+                        return fallback();
+                    }
+                    break;
+                }
+                case JXL_DEC_SUCCESS: {
+                    if (JxlDecoderGetBasicInfo(dec.get(), &info) == JXL_DEC_ERROR) {
+                        log::err("jxl: basic info get fail");
+                        return fallback();
+                    }
+                    if (buf.size() == 0) {
+                        log::err("jxl: success status but no decoded image in the buffer");
+                        return fallback();
+                    }
+                    auto tex = generate_texture_from_buffer(buf.data(), info.xsize, info.ysize, fmt.num_channels);
+                    return Texture(tex, {info.xsize, info.ysize});
+                }
+            }
+        }
     }
 
     int w, h, ch;

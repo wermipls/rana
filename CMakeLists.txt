@@ -139,6 +139,25 @@ if (NOT TARGET PhysicsFS)
 endif()
 target_link_libraries(rana PhysFS::PhysFS-static)
 
+# libjxl
+option(BUILD_TESTING "" OFF) # sick namespace pollution
+option(JPEGXL_ENABLE_FUZZERS "" OFF)
+option(JPEGXL_ENABLE_TOOLS "" OFF)
+option(JPEGXL_ENABLE_JPEGLI "" OFF)
+option(JPEGXL_ENABLE_JPEGLI_LIBJPEG "" OFF)
+option(JPEGXL_ENABLE_DOXYGEN "" OFF)
+option(JPEGXL_ENABLE_MANPAGES "" OFF)
+option(JPEGXL_ENABLE_BENCHMARK "" OFF)
+option(JPEGXL_ENABLE_EXAMPLES "" OFF)
+option(JPEGXL_ENABLE_LIBPNG "" OFF)
+option(JPEGXL_ENABLE_JNI "" OFF)
+option(JPEGXL_ENABLE_SJPEG "" OFF)
+option(JPEGXL_ENABLE_OPENEXR "" OFF)
+option(JPEGXL_ENABLE_TRANSCODE_JPEG "" OFF)
+option(JPEGXL_STATIC "" ON)
+add_subdirectory(libjxl libjxl EXCLUDE_FROM_ALL)
+target_link_libraries(rana jxl)
+
 # imgui
 target_include_directories(rana PRIVATE imgui)
 target_include_directories(rana PRIVATE imgui/backends)
