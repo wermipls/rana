@@ -104,6 +104,9 @@ option(SDL_TEST_LIBRARY "" OFF)
 option(SDL_VULKAN "" OFF)
 add_subdirectory(SDL EXCLUDE_FROM_ALL)
 target_link_libraries(rana SDL3::SDL3)
+# for some reason, SDL_LEAN_AND_MEAN cmake switch is only exposed for
+# the ngage build, so we have to set it like this
+sdl_compile_definitions(PRIVATE SDL_LEAN_AND_MEAN)
 
 # libopus
 if (NOT TARGET opus)
