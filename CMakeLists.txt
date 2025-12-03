@@ -156,7 +156,7 @@ option(JPEGXL_ENABLE_OPENEXR "" OFF)
 option(JPEGXL_ENABLE_TRANSCODE_JPEG "" OFF)
 option(JPEGXL_STATIC "" ON)
 add_subdirectory(libjxl libjxl EXCLUDE_FROM_ALL)
-target_link_libraries(rana jxl)
+target_link_libraries(rana jxl_dec)
 
 # imgui
 target_include_directories(rana PRIVATE imgui)
