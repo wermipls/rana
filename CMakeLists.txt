@@ -155,7 +155,7 @@ target_link_libraries(rana glm::glm)
 
 # LuaJIT
 # this works... with gcc only
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GCC")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Copy LuaJIT source to binary dir. LuaJIT builds in-source,
     # and we don't want to modify the original source tree, so
     # we copy it.
@@ -164,17 +164,17 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GCC")
     ExternalProject_Add(luajit
         SOURCE_DIR "${CMAKE_BINARY_DIR}/libs/LuaJIT"
         BUILD_IN_SOURCE true
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND "make"
+        CONFIGURE_COMMAND make clean
+        BUILD_COMMAND make amalg
         INSTALL_COMMAND ""
-        BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit-5.1.dll.a"
+        BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit.a"
     )
     add_library(LuaJIT INTERFACE)
     add_dependencies(LuaJIT luajit)
-    target_include_directories(LuaJIT INTERFACE LuaJIT/src)
-    target_link_libraries(LuaJIT INTERFACE "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit-5.1.dll.a")
+    target_include_directories(LuaJIT INTERFACE ${CMAKE_BINARY_DIR}/libs/LuaJIT/src)
+    target_link_libraries(LuaJIT INTERFACE "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit.a")
 
-    target_include_directories(rana PRIVATE LuaJIT)
+    target_include_directories(rana PUBLIC ${CMAKE_BINARY_DIR}/libs/LuaJIT)
     target_link_libraries(rana LuaJIT)
 else()
     find_package(PkgConfig REQUIRED)
