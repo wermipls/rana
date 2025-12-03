@@ -73,6 +73,9 @@ if(MSVC)
 else()
   target_compile_options(rana PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(rana PRIVATE -fmacro-prefix-map=${PROJECT_SOURCE_DIR}=rana)
+  string(APPEND CMAKE_CXX_FLAGS " -ffunction-sections -fdata-sections")
+  string(APPEND CMAKE_C_FLAGS " -ffunction-sections -fdata-sections")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,--gc-sections")
 endif()
 
 # handle dependencies
