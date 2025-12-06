@@ -19,8 +19,9 @@
 #include <tracy/Tracy.hpp>
 #include "error_handling.hpp"
 
-#include <jxl/decode_cxx.h>
-#include <jxl/resizable_parallel_runner_cxx.h>
+#ifdef RANA_ENABLE_JXL
+    #include <jxl/decode_cxx.h>
+#endif
 
 namespace rana {
 namespace gfx {
@@ -117,6 +118,7 @@ auto Texture::load(const char *fn) -> Texture
         return fallback();
     }
 
+#ifdef RANA_ENABLE_JXL
     constexpr uint8_t jxl_magic[2] = {0xFF, 0x0A};
     if (memcmp(file.data(), jxl_magic, sizeof(jxl_magic)) == 0) {
         // try jpeg xl.
@@ -170,6 +172,7 @@ auto Texture::load(const char *fn) -> Texture
             }
         }
     }
+#endif
 
     int w, h, ch;
     auto *data = stbi_load_from_memory(file.data(), file.size(), &w, &h, &ch, 4);
