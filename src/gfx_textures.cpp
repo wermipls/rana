@@ -117,8 +117,8 @@ auto Texture::load(const char *fn) -> Texture
         return fallback();
     }
 
-    auto fnsv = std::string_view(fn);
-    if (fnsv.ends_with(".jxl")) { // FIXME
+    constexpr uint8_t jxl_magic[2] = {0xFF, 0x0A};
+    if (memcmp(file.data(), jxl_magic, sizeof(jxl_magic)) == 0) {
         // try jpeg xl.
         auto dec = JxlDecoderMake(nullptr);
 
