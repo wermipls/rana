@@ -10,6 +10,7 @@ struct EffectImpl : public EffectWrapper {
     {
         params.push_back({"bits", 1.0});
         params.push_back({"rate", 1.0});
+        params.push_back({"smoothing", 0});
         fx = Bitcrush();
     }
 
@@ -45,5 +46,5 @@ EffectWrapper *newEffect()
 
 int getParamCount()
 {
-    return 2;
+    return 3;
 }

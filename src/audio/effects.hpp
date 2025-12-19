@@ -426,17 +426,20 @@ public:
 };
 
 class Bitcrush : public Effect {
-    static constexpr auto paramCount = 2;
+    static constexpr auto paramCount = 3;
     const char *paramNames[paramCount] = {
         "bits",
         "rate",
+        "smoothing",
     };
     float params[paramCount] = {};
 
     int bits = 16;
     float sr, rate;
     float t = 0;
-    SampleStereo prev = {0,0};
+    float smoothing = 0;
+    SampleStereo x0 = {0,0};
+    SampleStereo x1 = {0,0};
 
     inline static int bitcrush(int a, int bits)
     {
@@ -485,6 +488,7 @@ public:
         switch (index) {
             case 0: setBits(value); break;
             case 1: setRate(value); break;
+            case 2: smoothing = value; break;
         }
     }
 
@@ -498,12 +502,14 @@ public:
         switch (index) {
             case 0: snprintf(str, 8, "%d", bits); break;
             case 1: snprintf(str, 8, "%f", rate); break;
+            case 2: snprintf(str, 8, "%f", smoothing); break;
         }
     }
     static inline void getParamLabel(int index, char *str) {
         switch (index) {
             case 0: strncpy(str, "bits", 8); break;
             case 1: strncpy(str, "Hz", 8); break;
+            default: str[0] = 0; break;
         }
     }
 #endif
@@ -511,23 +517,30 @@ public:
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Bitcrush");
+        float linear_amt = std::max(smoothing*2.f - 1.f, 0.f);
+        float shave_amt = std::min(smoothing*2.f, 1.f);
         for (size_t i = 0; i < n; i++) {
             // rate
             t += rate / sr;
+            float s = 0;
             if (t >= 1.0f) {
                 t -= 1;
-                prev = in[i];
+                s = t;
+                x1 = x0;
+                x0 = in[i];
             }
 
             // bitcrush
-            int l = prev.l * 32768;
-            int r = prev.r * 32768;
+            int l0 = bitcrush(l0 * 32768, bits);
+            int r0 = bitcrush(r0 * 32768, bits);
+            int l1 = bitcrush(l1 * 32768, bits);
+            int r1 = bitcrush(r1 * 32768, bits);
 
-            l = bitcrush(l, bits);
-            r = bitcrush(r, bits);
+            s = 1.f - s * shave_amt;
+            s = s * (1.f - linear_amt) + t * linear_amt;
 
-            in[i].l = l / 32768.f;
-            in[i].r = r / 32768.f;
+            in[i].l = (l0 / 32768.f) * s + (l1 / 32768.f) * (1.f - s);
+            in[i].r = (r0 / 32768.f) * s + (r1 / 32768.f) * (1.f - s);
         }
     }
 };
