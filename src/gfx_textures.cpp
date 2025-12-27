@@ -68,6 +68,10 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    // make the mipmaps sharper without increasing aliasing tremendously.
+    // FIXME: this should probably be exposed in the API as well.
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -0.5);
+
     if ((ch != 3) && (ch != 4)) {
         glGenerateMipmap(GL_TEXTURE_2D);
         return tex;
