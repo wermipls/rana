@@ -148,6 +148,11 @@ int rana_main(int argc, char **argv)
 
     rana::fs::init(argv[0]);
 
+    if (argc >= 2) {
+        rana::log::info("Mounting '%s' as asset path.", argv[1]);
+        rana::fs::mount(argv[1], 0);
+    }
+
     sol::state lua;
     lua.open_libraries();
     auto rana = lua["rana"].get_or_create<sol::table>();

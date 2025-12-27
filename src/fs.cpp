@@ -23,8 +23,12 @@ void init(const char *argv0)
 
     PHYSFS_mount("assets.zip", nullptr, 0);
     PHYSFS_mount("./", nullptr, 0);
-    PHYSFS_mount("../assets/", nullptr, 0);
     PHYSFS_mountMemory(default_assets, sizeof(default_assets), nullptr, "__rana.zip", nullptr, 1);
+}
+
+void mount(const char *path, bool append)
+{
+    PHYSFS_mount(path, nullptr, append);
 }
 
 bool readfile(std::vector<uint8_t> &buffer, const char *fn)
