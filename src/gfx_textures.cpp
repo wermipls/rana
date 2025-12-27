@@ -40,6 +40,18 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
             throw Exception("unsupported texture channel count: " + std::to_string(ch));
     }
 
+    if (ch == 4) {
+        // premultiply the alpha.
+        auto p = buf;
+        for (size_t i = 0; i < w*h; i++) {
+            auto alpha = p[3] / 255.f;
+            p[0] = roundf(p[0] * alpha);
+            p[1] = roundf(p[1] * alpha);
+            p[2] = roundf(p[2] * alpha);
+            p += 4;
+        }
+    }
+
     uint32_t tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -78,7 +90,7 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
         }
 
         auto newbuf = stbir_resize_uint8_srgb(s ? s : buf, w_prev, h_prev, w_prev*ch, s, w_new, h_new, w_new*ch,
-                                              ch == 4 ? STBIR_RGBA : STBIR_RGB);
+                                              ch == 4 ? STBIR_RGBA_PM : STBIR_RGB);
         if (!newbuf) {
             break;
         }
