@@ -243,6 +243,7 @@ int rana_main(int argc, char **argv)
 
     auto type_texture = lua.new_usertype<rana::gfx::Texture>("Texture");
     type_texture["setMinFilter"] = &rana::gfx::Texture::setMinFilter;
+    type_texture["setMagFilter"] = &rana::gfx::Texture::setMagFilter;
 
     cb_rana_load();
 
