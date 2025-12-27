@@ -31,6 +31,26 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
 {
     ZoneScoped;
 
+    std::vector<uint8_t> buf2;
+    if (ch == 2) {
+        // special handling for grayscale (srgb gamma) + alpha.
+        // lost cause under opengl, just expand to srgba.
+        buf2.resize(w*h*4);
+
+        auto dst = buf2.data();
+        auto src = buf;
+        for (size_t i = 0; i < w*h; i++) {
+            dst[0] = src[0];
+            dst[1] = src[0];
+            dst[2] = src[0];
+            dst[3] = src[1];
+            dst += 4;
+            src += 2;
+        }
+        ch = 4;
+        buf = buf2.data();
+    }
+
     uint32_t internal_format;
     uint32_t format;
     switch (ch) {
@@ -192,13 +212,13 @@ auto Texture::load(const char *fn) -> Texture
 #endif
 
     int w, h, ch;
-    auto *data = stbi_load_from_memory(file.data(), file.size(), &w, &h, &ch, 4);
+    auto *data = stbi_load_from_memory(file.data(), file.size(), &w, &h, &ch, 0);
     if (!data) {
         log::err("failed to load texture '%s': %s", fn, stbi_failure_reason());
         return fallback();
     }
 
-    auto tex = generate_texture_from_buffer(data, w, h, 4);
+    auto tex = generate_texture_from_buffer(data, w, h, ch);
 
     stbi_image_free(data);
 
