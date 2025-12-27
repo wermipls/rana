@@ -177,10 +177,12 @@ int rana_main(int argc, char **argv)
     sol::protected_function cb_rana_configure   = lua["rana"]["configure"];
 
     auto cfg = lua.create_table();
-    cb_rana_configure(cfg);
+    if (cb_rana_configure) {
+        cb_rana_configure(cfg);
+    }
 
     auto ctx = rana::gfx::Context(
-        cfg.get<const char *>("window_title"),
+        cfg.get_or<const char *>("window_title", "rana"),
         cfg.get_or("window_width", 800),
         cfg.get_or("window_height", 600)
     );
@@ -245,7 +247,9 @@ int rana_main(int argc, char **argv)
     type_texture["setMinFilter"] = &rana::gfx::Texture::setMinFilter;
     type_texture["setMagFilter"] = &rana::gfx::Texture::setMagFilter;
 
-    cb_rana_load();
+    if (cb_rana_load) {
+        cb_rana_load();
+    }
 
     enumerate_controllers();
     auto input = rana::input::Mapper();
@@ -323,11 +327,15 @@ int rana_main(int argc, char **argv)
 
         input.update(current_gamepad);
         auto ticks_new = SDL_GetTicksNS();
-        cb_rana_update(double(ticks_new - ticks_ns) / 1000000000.0);
+        if (cb_rana_update) {
+            cb_rana_update(double(ticks_new - ticks_ns) / 1000000000.0);
+        }
         ticks_ns = ticks_new;
 
         ctx.drawBegin();
-        cb_rana_draw();
+        if (cb_rana_draw) {
+            cb_rana_draw();
+        }
         ctx.drawFinish();
 
         synchronize_fps(1000.0 / 120.0);
