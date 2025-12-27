@@ -1,4 +1,5 @@
 #include "gfx_textures.hpp"
+#include "gfx_colorspace.hpp"
 #include "fs.hpp"
 #include "log.hpp"
 
@@ -45,9 +46,9 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
         auto p = buf;
         for (size_t i = 0; i < w*h; i++) {
             auto alpha = p[3] / 255.f;
-            p[0] = roundf(p[0] * alpha);
-            p[1] = roundf(p[1] * alpha);
-            p[2] = roundf(p[2] * alpha);
+            p[0] = float_to_srgb8(srgb8_to_float(p[0]) * alpha);
+            p[1] = float_to_srgb8(srgb8_to_float(p[1]) * alpha);
+            p[2] = float_to_srgb8(srgb8_to_float(p[2]) * alpha);
             p += 4;
         }
     }
@@ -57,7 +58,7 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, w, h, 0, format, GL_UNSIGNED_BYTE, buf);
     if (ch == 1) {
-        int swizzle[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
+        int swizzle[] = {GL_RED, GL_RED, GL_RED, GL_RED};
         glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
