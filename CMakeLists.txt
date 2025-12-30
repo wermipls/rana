@@ -178,36 +178,27 @@ add_subdirectory(glm glm)
 target_link_libraries(rana glm::glm)
 
 # LuaJIT
-# this works... with gcc only
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # Copy LuaJIT source to binary dir. LuaJIT builds in-source,
-    # and we don't want to modify the original source tree, so
-    # we copy it.
-    file(COPY LuaJIT DESTINATION ${CMAKE_BINARY_DIR}/libs)
+option(
+    LUAJIT_ALWAYS_BUILD
+    "Run the LuaJIT make unconditionally. Useful when making changes to the library. Disabled by default."
+    OFF
+)
+ExternalProject_Add(luajit
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/LuaJIT/src"
+    BUILD_IN_SOURCE true
+    CONFIGURE_COMMAND make clean
+    BUILD_COMMAND make amalg BUILDMODE=static CC=${CMAKE_C_COMPILER}
+    INSTALL_COMMAND ""
+    BUILD_BYPRODUCTS "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a"
+    BUILD_ALWAYS ${LUAJIT_ALWAYS_BUILD}
+)
+add_library(LuaJIT INTERFACE)
+add_dependencies(LuaJIT luajit)
+target_include_directories(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src")
+target_link_libraries(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a")
 
-    ExternalProject_Add(luajit
-        SOURCE_DIR "${CMAKE_BINARY_DIR}/libs/LuaJIT"
-        BUILD_IN_SOURCE true
-        CONFIGURE_COMMAND make clean
-        BUILD_COMMAND make amalg
-        INSTALL_COMMAND ""
-        BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit.a"
-    )
-    add_library(LuaJIT INTERFACE)
-    add_dependencies(LuaJIT luajit)
-    target_include_directories(LuaJIT INTERFACE ${CMAKE_BINARY_DIR}/libs/LuaJIT/src)
-    target_link_libraries(LuaJIT INTERFACE "${CMAKE_BINARY_DIR}/libs/LuaJIT/src/libluajit.a")
-
-    target_include_directories(rana PUBLIC ${CMAKE_BINARY_DIR}/libs/LuaJIT)
-    target_link_libraries(rana LuaJIT)
-else()
-    find_package(PkgConfig REQUIRED)
-
-    pkg_check_modules(LUA REQUIRED luajit)
-    target_link_libraries(rana ${LUA_LIBRARIES})
-    target_include_directories(rana PUBLIC ${LUA_INCLUDE_DIRS})
-    target_compile_options(rana PUBLIC ${LUA_CFLAGS_OTHER})
-endif()
+target_include_directories(rana PUBLIC "${CMAKE_SOURCE_DIR}/LuaJIT")
+target_link_libraries(rana LuaJIT)
 
 # sol
 target_include_directories(rana PRIVATE sol2/include)
