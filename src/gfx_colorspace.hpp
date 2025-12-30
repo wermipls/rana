@@ -1,9 +1,21 @@
+#pragma once
+
 #include <stdint.h>
+#include <math.h>
 
 namespace rana::gfx {
 
+static inline float srgb_to_float(float val)
+{
+    if (val <= 0.04045f) {
+        return val / 12.92f;
+    } else {
+        return pow((val + 0.055f) / 1.055f, 2.4f);
+    }
+}
+
 // adapted from https://gist.github.com/rygorous/2203834
-static float srgb8_to_float(uint8_t val)
+static inline float srgb8_to_float(uint8_t val)
 {
     // There's just 256 different input values - just use a table.
     static float table[256] = {
@@ -59,7 +71,7 @@ static float srgb8_to_float(uint8_t val)
 //
 // Max error for the whole function (integer-rounded result minus "exact" value, as computed in
 // floats using the official formula): 0.544403 at 0x3e9f8000
-static uint8_t float_to_srgb8(float in)
+static inline uint8_t float_to_srgb8(float in)
 {
     union FP32
     {

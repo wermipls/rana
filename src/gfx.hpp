@@ -14,10 +14,6 @@
 namespace rana {
 namespace gfx {
 
-constexpr auto gamma = 2.2f;
-inline auto srgb(glm::vec4 color) { return glm::pow(color, {gamma, gamma, gamma, 1.f}); }
-inline auto srgb(glm::vec3 color) { return glm::pow(color, {gamma, gamma, gamma}); }
-
 struct DrawBatch {
     using vec2 = glm::vec2;
     using vec4 = glm::vec4;

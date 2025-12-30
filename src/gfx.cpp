@@ -1,4 +1,5 @@
 #include "gfx.hpp"
+#include "gfx_colorspace.hpp"
 #include "sdl_error.hpp"
 #include "log.hpp"
 #include <glad/glad.h>
@@ -14,6 +15,21 @@
 
 namespace rana {
 namespace gfx {
+
+static inline glm::vec4 srgb(glm::vec4 color)
+{
+    return glm::vec4(
+        srgb_to_float(color.r) * color.a,
+        srgb_to_float(color.g) * color.a,
+        srgb_to_float(color.b) * color.a,
+        color.a
+    );
+}
+
+static inline glm::vec4 srgb(glm::vec3 color)
+{
+    return srgb(glm::vec4(color, 1.f));
+}
 
 void GLAPIENTRY opengl_msg_cb(GLenum source, GLenum type, GLuint id,
                               GLenum severity, GLsizei length,
