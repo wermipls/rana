@@ -531,10 +531,10 @@ public:
             }
 
             // bitcrush
-            int l0 = bitcrush(l0 * 32768, bits);
-            int r0 = bitcrush(r0 * 32768, bits);
-            int l1 = bitcrush(l1 * 32768, bits);
-            int r1 = bitcrush(r1 * 32768, bits);
+            int l0 = bitcrush(x0.l * 32768, bits);
+            int r0 = bitcrush(x0.r * 32768, bits);
+            int l1 = bitcrush(x1.l * 32768, bits);
+            int r1 = bitcrush(x1.r * 32768, bits);
 
             s = 1.f - s * shave_amt;
             s = s * (1.f - linear_amt) + t * linear_amt;
