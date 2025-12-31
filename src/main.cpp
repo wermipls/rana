@@ -182,7 +182,7 @@ int rana_main(int argc, char **argv)
     }
 
     auto ctx = rana::gfx::Context(
-        cfg.get_or<const char *>("window_title", "rana"),
+        cfg.get_or("window_title", (const char *)"rana"),
         cfg.get_or("window_width", 800),
         cfg.get_or("window_height", 600)
     );
