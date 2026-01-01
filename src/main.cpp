@@ -103,10 +103,9 @@ int fs_loader(lua_State* L)
             luaL_loadbuffer(L, (const char *)script.data(), script.size(), ("="+name).c_str());
             return 1;
         }
-    } else {
-        rana::log::err("module '%s' does not exist", name.c_str());
     }
-    return 0;
+    rana::log::err("module '%s' does not exist", name.c_str());
+    return 1;
 }
 
 sol::table open_fs(sol::this_state s)
@@ -163,7 +162,7 @@ int rana_main(int argc, char **argv)
             dlog(tb)
         end
     )", "=[rana setup]");
-    lua.add_package_loader(fs_loader);
+    lua.add_package_loader(fs_loader, true);
     sol::protected_function::set_default_handler(rana["error_handler"]);
 
     rana["fs"] = lua.require("fs", sol::c_call<decltype(&open_fs), &open_fs>, false);
