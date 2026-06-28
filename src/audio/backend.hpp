@@ -10,7 +10,6 @@ namespace rana {
 namespace audio {
 
 static SDL_AudioStream *stream;
-class MusicPlayer;
 
 void init(int sample_rate, SDL_AudioStreamCallback callback, void *userdata)
 {
