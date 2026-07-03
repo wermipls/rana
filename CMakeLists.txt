@@ -158,6 +158,12 @@ if(RANA_ENABLE_JXL)
     option(JPEGXL_ENABLE_TRANSCODE_JPEG "" OFF)
     option(JPEGXL_ENABLE_BOXES "" OFF)
     option(JPEGXL_STATIC "" ON)
+    # for now we keep only SSE2 enabled for size reasons.
+    # that might change to SSE4, since most CPUs from last ~15 years support it.
+    option(JPEGXL_ENABLE_HWY_AVX2 "" OFF)
+    option(JPEGXL_ENABLE_HWY_AVX3_DL "" OFF)
+    option(JPEGXL_ENABLE_HWY_SSE4 "" OFF)
+
     add_subdirectory(libjxl libjxl EXCLUDE_FROM_ALL)
     target_link_libraries(rana jxl_dec)
     target_compile_definitions(rana PRIVATE RANA_ENABLE_JXL)
