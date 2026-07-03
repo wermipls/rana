@@ -27,7 +27,7 @@
 namespace rana {
 namespace gfx {
 
-static uint32_t generate_texture_from_buffer(uint8_t *buf, int w, int h, int ch)
+static uint32_t generate_texture_from_buffer(uint8_t *buf, uint w, uint h, uint ch)
 {
     ZoneScoped;
 
