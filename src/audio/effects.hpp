@@ -30,15 +30,15 @@ public:
 };
 
 class Filter1Pole : public Effect {
+protected:
     static constexpr auto paramCount = 1;
     const char *paramNames[paramCount] = {
         "cutoff",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = { 0.5 };
 
     Hz sr;
     float coeff = 0;
-    bool highpass;
     SampleStereo q{};
 
     inline float normalized2coeff(float value)
@@ -50,20 +50,17 @@ class Filter1Pole : public Effect {
         return min(coeff + pow(value, 30.0f), 1.0f);
     }
 
-public:
     Filter1Pole(Hz sample_rate = 44100, bool is_highpass = false)
     {
         sr = sample_rate;
-        highpass = is_highpass;
         setCutoff(3000);
     }
-
     void setCutoff(Hz freq)
     {
         coeff = factor_1pole(freq, sr);
     }
 
-    virtual const char *getName() { return highpass ? "Highpass" : "Lowpass"; }
+public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
@@ -89,20 +86,30 @@ public:
             case 0: coeff = normalized2coeff(value); break;
         }
     }
+};
 
+class Lowpass : public Filter1Pole {
+public:
+    virtual const char *getName() { return "Lowpass"; }
     virtual void process(SampleStereo *in, size_t n)
     {
-        ZoneScopedN("Filter1Pole");
-        if (highpass) {
-            for (size_t i = 0; i < n; i++) {
-                q += (in[i] - q) * coeff;
-                in[i] -= q;
-            }
-        } else {
-            for (size_t i = 0; i < n; i++) {
-                q += (in[i] - q) * coeff;
-                in[i] = q;
-            }
+        ZoneScopedN("Lowpass");
+        for (size_t i = 0; i < n; i++) {
+            q += (in[i] - q) * coeff;
+            in[i] = q;
+        }
+    }
+};
+
+class Highpass : public Filter1Pole {
+public:
+    virtual const char *getName() { return "Highpass"; }
+    virtual void process(SampleStereo *in, size_t n)
+    {
+        ZoneScopedN("Highpass");
+        for (size_t i = 0; i < n; i++) {
+            q += (in[i] - q) * coeff;
+            in[i] -= q;
         }
     }
 };
@@ -118,7 +125,15 @@ class Reverb : public Effect {
         "lowpass",
         "highpass",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        0.25,
+        0.5,
+        1.0,
+        0.5,
+        0.5,
+        1.0,
+        0.0,
+    };
 
     fv_Context ctx;
 
@@ -150,6 +165,19 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    // dummy implementations.
+    inline void getParamFmt(int index, char *str)
+    {
+        snprintf(str, 8, "%f", params[index]);
+    }
+
+    static inline void getParamLabel(int index, char *str)
+    {
+        str[0] = 0;
+    }
+#endif
+
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Reverb");
@@ -165,7 +193,12 @@ class Delay : public Effect {
         "feedback",
         "delay",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        0.25,
+        1.0,
+        0.25,
+        0.1,
+    };
 
     static constexpr auto max_delay_seconds = 5.0;
     SampleStereo *buffer;
@@ -253,7 +286,11 @@ class Distortion : public Effect {
         "mix",
         "mode",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        0.0,
+        1.0,
+        0.0,
+    };
 
     static constexpr float gain_multi = 127;
     enum Mode {
@@ -432,7 +469,11 @@ class Bitcrush : public Effect {
         "rate",
         "smoothing",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        1,
+        1,
+        0,
+    };
 
     int bits = 16;
     float sr, rate;
@@ -554,7 +595,13 @@ class Compressor : public Effect {
         "ratio",
         "makeup",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        0.8,
+        0.2,
+        0.5,
+        0.5,
+        0.0,
+    };
 
     static constexpr float PeakSmoothingHz = 20.0f;
     float sr;
@@ -623,6 +670,19 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    // dummy implementations.
+    inline void getParamFmt(int index, char *str)
+    {
+        snprintf(str, 8, "%f", params[index]);
+    }
+
+    static inline void getParamLabel(int index, char *str)
+    {
+        str[0] = 0;
+    }
+#endif
+
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Compressor");
@@ -647,7 +707,12 @@ class Biquad : public Effect {
         "q",
         "gain",
     };
-    float params[paramCount] = {};
+    float params[paramCount] = {
+        0.0,
+        0.5,
+        0.2729,
+        0.5,
+    };
 
     float sr;
     struct Coeffs {
@@ -959,6 +1024,19 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    // dummy implementations.
+    inline void getParamFmt(int index, char *str)
+    {
+        snprintf(str, 8, "%f", params[index]);
+    }
+
+    static inline void getParamLabel(int index, char *str)
+    {
+        str[0] = 0;
+    }
+#endif
+
     virtual void process(SampleStereo *in, size_t n)
     {
         for (size_t i = 0; i < n; i++) {
@@ -1254,6 +1332,19 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return param[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
+
+#ifdef RANA_SUPERFLUOUS_VST_PARAMS
+    // dummy implementations.
+    inline void getParamFmt(int index, char *str)
+    {
+        snprintf(str, 8, "%f", param[index]);
+    }
+
+    static inline void getParamLabel(int index, char *str)
+    {
+        str[0] = 0;
+    }
+#endif
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
