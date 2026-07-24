@@ -30,6 +30,22 @@ class VstEffect : public AudioEffectX
         canProcessReplacing();   // supports replacing output
 
         vst_strncpy(programName, "Default", kVstMaxProgNameLen);
+
+        // A bunch of hosts allow param strings longer than 8.
+        // Why? There's a bunch of plugins that are either buggy or simply don't care
+        // (and rightfully so, because 8 characters + null is some kind of cruel joke),
+        // so it's better to overallocate than deal with potential memory corruption.
+        // Some DAWs explicitly consider it an extension, for instance Reaper
+        // (see https://www.reaper.fm/sdk/vst/vst_ext.php).
+        //
+        // We err on the safe side and only override the length for DAWs with known behavior.
+        char vendor[64+1];
+        getHostVendorString(vendor);
+        if (strcmp(vendor, "Renoise") == 0) {
+            param_str_len = 64;
+        } else if (strcmp(vendor, "Cockos") == 0) {
+            param_str_len = 255;
+        }
     }
     ~VstEffect() {};
 
@@ -71,12 +87,10 @@ class VstEffect : public AudioEffectX
         return fx.getParam(index);
     }
 
-    // fixme: implement getParameterProperties.
-    // the 8 character long names are really abysmal.
     virtual void getParameterName(VstInt32 index, char *text)
     {
         if (index >= fx.getParamCount()) return;
-        vst_strncpy(text, fx.getParamName(index), kVstMaxParamStrLen);
+        vst_strncpy(text, fx.getParamName(index), param_str_len);
     }
 
     virtual void getParameterLabel(VstInt32 index, char *label) {
@@ -110,6 +124,7 @@ class VstEffect : public AudioEffectX
     float sr = 44100;
     RanaEffect fx;
     char programName[kVstMaxProgNameLen + 1];
+    size_t param_str_len = 8;
 };
 
 // all this template bs just to finish it off with a macro, heh.
