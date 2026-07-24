@@ -95,11 +95,30 @@ class VstEffect : public AudioEffectX
 
     virtual void getParameterLabel(VstInt32 index, char *label) {
         if (index >= fx.getParamCount()) return;
-        fx.getParamLabel(index, label);
+
+        constexpr bool has_getParamLabel = requires(RanaEffect &fx) {
+            fx.getParamLabel(int(0), (char *)(nullptr));
+        };
+
+        if constexpr (has_getParamLabel) {
+            fx.getParamLabel(index, label);
+        } else {
+            label[0] = 0;
+        }
     }
 
     virtual void getParameterDisplay(VstInt32 index, char *text) {
-        fx.getParamFmt(index, text);
+        if (index >= fx.getParamCount()) return;
+
+        constexpr bool has_getParamFmt = requires(RanaEffect &fx) {
+            fx.getParamFmt(int(0), (char *)(nullptr));
+        };
+
+        if constexpr (has_getParamFmt) {
+            fx.getParamFmt(index, text);
+        } else {
+            snprintf(text, param_str_len + 1, "%f", fx.getParam(index));
+        }
     }
 
     virtual bool getEffectName(char *name) {
