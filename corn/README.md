@@ -20,7 +20,7 @@ Basic usage:
 Nothing else is supported; if using any more complex DSP, bounce your instruments to basic sample data and/or substitute modulation with pattern commands.
 
 ### Samples
-- Sample data encoded in FLAC
+- Sample data encoded in FLAC or Opus
 - Transpose
 - Finetune
 - Volume
@@ -30,8 +30,6 @@ Nothing else is supported; if using any more complex DSP, bounce your instrument
 
 #### Sample encoding hints
 The converter parses encoding hints embedded in sample names. This allows easy fine-tuning of final sample bitrate while keeping the original, high quality samples in the project, as well as using codecs not supported natively by Renoise. Hint format is `[!rana codec quality]`, for example `[!rana opus 32k]` would encode the sample as Opus with target bitrate of 32kbps.
-
-As of current, no encoding hints are acted upon by the converter.
 
 ### Patterns
 
@@ -59,7 +57,8 @@ Limitations:
 ### Mixer
 
 A range of in-engine effects are supported, available in VST form for Renoise playback (`vst` directory):
-- ranaBitcrush - bitdepth/rate reduction
+- ranaBitcrush - bitdepth/rate reduction with "smoothing" parameter that blends between sample-and-hold and linear interpolation
+- ranaBiquad - parametric 2nd order filter with selectable modes: lowpass, highpass, low shelf, high shelf, bandstop, bandpass, allpass, peaking
 - ranaCompressor - basic compressor that doubles as a limiter, can be quite gentle or very aggressive going into softclip territory
 - ranaDelay - very simple delay
     - given a delay value in milliseconds, delay parameter value in percent (ready to be pasted in Renoise) would be `milliseconds / 50`
