@@ -168,19 +168,6 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
-#ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    // dummy implementations.
-    inline void getParamFmt(int index, char *str)
-    {
-        snprintf(str, 8, "%f", params[index]);
-    }
-
-    static inline void getParamLabel(int index, char *str)
-    {
-        str[0] = 0;
-    }
-#endif
-
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Reverb");
@@ -643,19 +630,6 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
-#ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    // dummy implementations.
-    inline void getParamFmt(int index, char *str)
-    {
-        snprintf(str, 8, "%f", params[index]);
-    }
-
-    static inline void getParamLabel(int index, char *str)
-    {
-        str[0] = 0;
-    }
-#endif
-
     virtual void process(SampleStereo *in, size_t n)
     {
         // FIXME: vectorize.
@@ -999,19 +973,6 @@ public:
     virtual float getParam(int index) { return params[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
 
-#ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    // dummy implementations.
-    inline void getParamFmt(int index, char *str)
-    {
-        snprintf(str, 8, "%f", params[index]);
-    }
-
-    static inline void getParamLabel(int index, char *str)
-    {
-        str[0] = 0;
-    }
-#endif
-
     virtual void process(SampleStereo *in, size_t n)
     {
         for (size_t i = 0; i < n; i++) {
@@ -1230,19 +1191,6 @@ public:
     virtual const char *getParamName(int index) { return paramNames[index % paramCount]; }
     virtual float getParam(int index) { return param[index % paramCount]; }
     virtual int getParamCount() { return paramCount; }
-
-#ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    // dummy implementations.
-    inline void getParamFmt(int index, char *str)
-    {
-        snprintf(str, 8, "%f", param[index]);
-    }
-
-    static inline void getParamLabel(int index, char *str)
-    {
-        str[0] = 0;
-    }
-#endif
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
