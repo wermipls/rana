@@ -8,11 +8,12 @@
     #include <stdio.h>
     #include <string.h>
 #endif
+#include <memory>
 
 namespace rana {
 namespace audio {
 
-using std::min, std::max, std::pow, std::fmod, std::abs, std::copysign, std::isnan;
+using std::min, std::max, std::pow, std::fmod, std::abs, std::floor;
 
 class Effect {
 public:
@@ -38,7 +39,7 @@ protected:
     float params[paramCount] = { 0.5 };
 
     Hz sr;
-    float coeff = 0;
+    SampleStereo coeff = 0;
     SampleStereo q{};
 
     inline float normalized2coeff(float value)
@@ -50,7 +51,7 @@ protected:
         return min(coeff + pow(value, 30.0f), 1.0f);
     }
 
-    Filter1Pole(Hz sample_rate = 44100, bool is_highpass = false)
+    Filter1Pole(Hz sample_rate = 44100)
     {
         sr = sample_rate;
         setCutoff(3000);
@@ -67,7 +68,7 @@ public:
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
     inline void getParamFmt(int index, char *str) {
-        auto hz = std::acos(1 - coeff*coeff / (2-2*coeff)) * sr / (2 * pi);
+        auto hz = std::acos(1 - coeff.l*coeff.l / (2-2*coeff.l)) * sr / (2 * pi);
         if (std::isnormal(hz)) {
             snprintf(str, 8, "%f", hz);
         } else {
@@ -90,6 +91,7 @@ public:
 
 class Lowpass : public Filter1Pole {
 public:
+    Lowpass(Hz sample_rate = 44100) : Filter1Pole(sample_rate) {}
     virtual const char *getName() { return "Lowpass"; }
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -103,6 +105,7 @@ public:
 
 class Highpass : public Filter1Pole {
 public:
+    Highpass(Hz sample_rate = 44100) : Filter1Pole(sample_rate) {}
     virtual const char *getName() { return "Highpass"; }
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -201,19 +204,19 @@ class Delay : public Effect {
     };
 
     static constexpr auto max_delay_seconds = 5.0;
-    SampleStereo *buffer;
+    std::unique_ptr<SampleStereo[]> buffer;
     size_t buffer_size;
     size_t buffer_pos = 0;
     size_t delay_size = 0;
-    float feedback = 0.25;
-    float wet = 0.25;
-    float dry = 1.0;
+    SampleStereo feedback = 0.25;
+    SampleStereo wet = 0.25;
+    SampleStereo dry = 1.0;
 
 public:
     Delay(Hz sample_rate = 44100)
     {
         buffer_size = sample_rate * max_delay_seconds;
-        buffer = new SampleStereo[buffer_size];
+        buffer = std::make_unique<SampleStereo[]>(buffer_size);
         for (size_t i = 0; i < buffer_size; i++) {
             buffer[i] = 0;
         }
@@ -302,9 +305,9 @@ class Distortion : public Effect {
         Fold,
         BadFold,
     } mode;
-    float gain = 1;
-    float dry = 0;
-    float wet = 1;
+    SampleStereo gain = 1;
+    SampleStereo dry = 0;
+    SampleStereo wet = 1;
 
 public:
     Distortion()
@@ -359,7 +362,7 @@ public:
         };
         switch (index) {
             default: snprintf(str, 8, "%f", params[index]); break;
-            case 0: snprintf(str, 8, "%f", gain); break;
+            case 0: snprintf(str, 8, "%f", gain.l); break;
             case 2: snprintf(str, 8, "%s", mode_str[mode]); break;
         }
     }
@@ -378,8 +381,7 @@ public:
         case Hardclip:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
-                in[i].l = old.l * dry + max(min(in[i].l * gain, 1.0f), -1.0f) * wet;
-                in[i].r = old.r * dry + max(min(in[i].r * gain, 1.0f), -1.0f) * wet;
+                in[i] = old * dry + max(min(in[i] * gain, 1.0), -1.0) * wet;
             }
             break;
         case Softclip: {
@@ -389,73 +391,44 @@ public:
             constexpr auto d =  1.13379f;
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
-                auto ls = copysign(1.0f, in[i].l);
-                auto rs = copysign(1.0f, in[i].r);
-
-                SampleStereo x = {
-                    min(1.0f, abs(in[i].l) * gain),
-                    min(1.0f, abs(in[i].r) * gain)
-                };
-                in[i].l = old.l * dry + (x.l*x.l*x.l*x.l*a + x.l*x.l*x.l*b + x.l*x.l*c + x.l*d) * ls * wet;
-                in[i].r = old.r * dry + (x.r*x.r*x.r*x.r*a + x.r*x.r*x.r*b + x.r*x.r*c + x.r*d) * rs * wet;
+                auto x = min(1.0, abs(in[i]) * gain);
+                in[i] = old * dry + copysign((x*x*x*x*a + x*x*x*b + x*x*c + x*d), old) * wet;
             }
             break;
         }
         case Softsine:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
-                SampleStereo x = {
-                    min(1.0f, max(-1.0f, in[i].l * gain / (float)sqrt2)),
-                    min(1.0f, max(-1.0f, in[i].r * gain / (float)sqrt2))
-                };
-                in[i].l = old.l * dry + fast_sin_halfpi(x.l) * wet;
-                in[i].r = old.r * dry + fast_sin_halfpi(x.r) * wet;
+                auto x = min(1.0f, max(-1.0, old * gain / sqrt2));
+                in[i] = old * dry + fast_sin_halfpi(x) * wet;
             }
             break;
         case Tanh:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
-                in[i].l = old.l * dry + tanh(in[i].l * gain) * wet;
-                in[i].r = old.r * dry + tanh(in[i].r * gain) * wet;
+                in[i] = old * dry + fast_tanh(old * gain) * wet;
             }
             break;
         case Shape:
             for (size_t i = 0; i < n; i++) {
                 auto old = in[i];
-                auto ls = copysign(1.0f, in[i].l);
-                auto rs = copysign(1.0f, in[i].r);
-                in[i].l = old.l * dry + max(min(pow(abs(in[i].l), 1.0f / gain), 1.0f), -1.0f) * ls * wet;
-                in[i].r = old.r * dry + max(min(pow(abs(in[i].r), 1.0f / gain), 1.0f), -1.0f) * rs * wet;
+                auto x = copysign(max(min(pow(abs(old), SampleStereo(1.0) / gain), 1.0), -1.0), old);
+                in[i] = old * dry + x * wet;
             }
             break;
         case Fold:
             for (size_t i = 0; i < n; i++) {
-                auto ls = copysign(1.0f, in[i].l);
-                auto rs = copysign(1.0f, in[i].r);
-                auto l = abs(in[i].l * gain);
-                auto r = abs(in[i].r * gain);
-                auto lf = fmod(l + 1.0f, 4.0f);
-                auto rf = fmod(r + 1.0f, 4.0f);
-                l = fmod(l + 1.0f, 2.0f);
-                r = fmod(r + 1.0f, 2.0f);
-                if (lf >= 2.0f) l = 2.0f - l;
-                if (rf >= 2.0f) r = 2.0f - r;
-                in[i].l = in[i].l * dry + (l - 1.0) * ls * wet;
-                in[i].r = in[i].r * dry + (r - 1.0) * rs * wet;
+                auto old = in[i];
+                auto a = (old * gain - 1.0) / 4.0;
+                auto x = abs(a - floor(a) - 0.5) * 4.0 - 1.0;
+                in[i] = old * dry + x * wet;
             }
             break;
         case BadFold:
             for (size_t i = 0; i < n; i++) {
-                auto l = in[i].l * gain;
-                auto r = in[i].r * gain;
-                l = fmod(l, 1.0f);
-                r = fmod(r, 1.0f);
-                auto lf = abs(fmod(in[i].l, 2.0f));
-                auto rf = abs(fmod(in[i].r, 2.0f));
-                lf = (lf > 1.0f) ? -1.0f : 1.0f;
-                rf = (rf > 1.0f) ? -1.0f : 1.0f;
-                in[i].l = in[i].l * dry + l * lf * wet;
-                in[i].r = in[i].r * dry + r * rf * wet;
+                auto old = in[i];
+                auto x = fmod(old * gain, 1.0);
+                in[i] = old * dry + x * wet;
             }
             break;
         }
@@ -476,9 +449,9 @@ class Bitcrush : public Effect {
     };
 
     int bits = 16;
-    float sr, rate;
-    float t = 0;
-    float smoothing = 0;
+    double sr, rate;
+    double t = 0;
+    double smoothing = 0;
     SampleStereo x0 = {0,0};
     SampleStereo x1 = {0,0};
 
@@ -516,9 +489,9 @@ public:
         bits = float2int(value, 2, 16);
     }
 
-    void setRate(float value)
+    void setRate(double value)
     {
-        rate = 44100.0f * pow(value, 2);
+        rate = 44100.0 * pow(value, 2);
     }
 
     virtual void setParam(int index, float value)
@@ -557,15 +530,16 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        // FIXME: vectorize.
         ZoneScopedN("Bitcrush");
-        float linear_amt = std::max(smoothing*2.f - 1.f, 0.f);
-        float shave_amt = std::min(smoothing*2.f, 1.f);
+        double linear_amt = std::max(smoothing*2.0 - 1.0, 0.0);
+        double shave_amt = std::min(smoothing*2.0, 1.0);
         for (size_t i = 0; i < n; i++) {
             // rate
             t += rate / sr;
-            float s = 0;
-            if (t >= 1.0f) {
-                t -= 1;
+            double s = 0;
+            if (t >= 1.0) {
+                t -= 1.0;
                 s = t;
                 x1 = x0;
                 x0 = in[i];
@@ -580,8 +554,8 @@ public:
             s = 1.f - s * shave_amt;
             s = s * (1.f - linear_amt) + t * linear_amt;
 
-            in[i].l = (l0 / 32768.f) * s + (l1 / 32768.f) * (1.f - s);
-            in[i].r = (r0 / 32768.f) * s + (r1 / 32768.f) * (1.f - s);
+            in[i].l = (l0 / 32768.0) * s + (l1 / 32768.0) * (1.0 - s);
+            in[i].r = (r0 / 32768.0) * s + (r1 / 32768.0) * (1.0 - s);
         }
     }
 };
@@ -604,25 +578,24 @@ class Compressor : public Effect {
     };
 
     static constexpr float PeakSmoothingHz = 20.0f;
-    float sr;
-    float pp_coeff;
-    float max = 0;
-    float pp = 0;
-    float attack_coeff = 0.0;
-    float release_coeff = 0.0;
-    float threshold_db = 0.8;
-    float volume_actual = 1.0;
-    float volume_target = 0;
-    float makeup = 1;
-    float ratio = 0.5;
+    double sr;
+    double pp_coeff;
+    double max = 0;
+    double pp = 0;
+    double attack_coeff = 0.0;
+    double release_coeff = 0.0;
+    double threshold_db = 0.8;
+    double volume_actual = 1.0;
+    double volume_target = 0;
+    double makeup = 1;
+    double ratio = 0.5;
 
     void peakToPeak(SampleStereo value)
     {
         max *= pp_coeff;
-        max = std::max(max,  value.l);
-        max = std::max(max,  value.r);
-        max = std::max(max, -value.l);
-        max = std::max(max, -value.r);
+        auto value_abs = abs(value);
+        max = std::max(max, value_abs.l);
+        max = std::max(max, value_abs.r);
         pp = dB(std::abs(max));
     }
 
@@ -685,6 +658,7 @@ public:
 
     virtual void process(SampleStereo *in, size_t n)
     {
+        // FIXME: vectorize.
         ZoneScopedN("Compressor");
         for (size_t i = 0; i < n; i++) {
             peakToPeak(in[i]);
@@ -714,9 +688,9 @@ class Biquad : public Effect {
         0.5,
     };
 
-    float sr;
+    double sr;
     struct Coeffs {
-        float a0, a1, a2, b0, b1, b2;
+        SampleStereo a0, a1, a2, b0, b1, b2;
         SampleStereo y1 = {0,0};
         SampleStereo y2 = {0,0};
     } c;
@@ -745,12 +719,12 @@ class Biquad : public Effect {
 
     static inline double v(double x, double y, double a)
     {
-        return sqrt(x*x*x*x + 2.f*a*a*x*x * (2.f * y*y - 1.f) + a*a*a*a);
+        return sqrt(x*x*x*x + 2.*a*a*x*x * (2. * y*y - 1.) + a*a*a*a);
     }
 
     static inline double k(double x, double y, double a)
     {
-        return x*x * (2.f * y*y - 1.f) + a*a;
+        return x*x * (2. * y*y - 1.) + a*a;
     }
 
     static inline double phi1(double x, double y, double a)
@@ -769,9 +743,10 @@ class Biquad : public Effect {
 
     static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
     {
+        // FIXME: allow adjusting cutoff for channels separately.
         const double omega = sr / cutoff;
-        const double damp = 0.5f / q;
-        const double gain = pow(10.0f, gain_db / 20.0f);
+        const double damp = 0.5 / q;
+        const double gain = pow(10.0f, gain_db / 20.0);
         
         const double ctg_pi_omega = tan(pi/2 - (pi/omega));
         const double a = sqrt(omega*omega - pi*pi * ctg_pi_omega*ctg_pi_omega); // (2.11)
@@ -1348,11 +1323,12 @@ public:
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
+        // FIXME: vectorize this, revert back to double processing.
         ZoneScopedN("Galactic");
-        float *in1 = &in->l;
-        float *in2 = &in->r;
-        float *out1 = in1;
-        float *out2 = in2;
+        auto in1 = &in->l;
+        auto in2 = &in->r;
+        auto out1 = in1;
+        auto out2 = in2;
 
         for (size_t i = 0; i < n_samples; i++) {
             auto inputSampleL = *in1;

@@ -37,32 +37,32 @@ extern "C" {
 
 
 typedef struct {
-  float feedback;
-  float filterstore;
-  float damp1, damp2;
-  float buf[4096];
+  double feedback;
+  double filterstore;
+  double damp1, damp2;
+  double buf[4096];
   int bufsize;
   int bufidx;
 } fv_Comb;
 
 typedef struct {
-  float feedback;
-  float buf[2048];
+  double feedback;
+  double buf[2048];
   int bufsize;
   int bufidx;
 } fv_Allpass;
 
 typedef struct {
-  float mode;
-  float gain;
-  float roomsize, roomsize1;
-  float damp, damp1;
-  float wet, wet1, wet2;
-  float dry;
-  float width;
-  float sr;
-  float hp_l, hp_r, hp_cutoff, hp_coeff;
-  float lp_l, lp_r, lp_cutoff, lp_coeff;
+  double mode;
+  double gain;
+  double roomsize, roomsize1;
+  double damp, damp1;
+  double wet, wet1, wet2;
+  double dry;
+  double width;
+  double sr;
+  double hp_l, hp_r, hp_cutoff, hp_coeff;
+  double lp_l, lp_r, lp_cutoff, lp_coeff;
 
   fv_Comb combl[FV_NUMCOMBS];
   fv_Comb combr[FV_NUMCOMBS];
@@ -73,16 +73,16 @@ typedef struct {
 
 void fv_init(fv_Context *ctx);
 void fv_mute(fv_Context *ctx);
-void fv_process(fv_Context *ctx, float *buf, int n);
-void fv_set_samplerate(fv_Context *ctx, float value);
-void fv_set_mode(fv_Context *ctx, float value);
-void fv_set_roomsize(fv_Context *ctx, float value);
-void fv_set_damp(fv_Context *ctx, float value);
-void fv_set_wet(fv_Context *ctx, float value);
-void fv_set_dry(fv_Context *ctx, float value);
-void fv_set_width(fv_Context *ctx, float value);
-void fv_set_highpass(fv_Context *ctx, float value);
-void fv_set_lowpass(fv_Context *ctx, float value);
+void fv_process(fv_Context *ctx, double *buf, int n);
+void fv_set_samplerate(fv_Context *ctx, double value);
+void fv_set_mode(fv_Context *ctx, double value);
+void fv_set_roomsize(fv_Context *ctx, double value);
+void fv_set_damp(fv_Context *ctx, double value);
+void fv_set_wet(fv_Context *ctx, double value);
+void fv_set_dry(fv_Context *ctx, double value);
+void fv_set_width(fv_Context *ctx, double value);
+void fv_set_highpass(fv_Context *ctx, double value);
+void fv_set_lowpass(fv_Context *ctx, double value);
 
 #endif
 

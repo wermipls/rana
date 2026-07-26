@@ -9,7 +9,13 @@ namespace rana {
 namespace audio {
 
 struct DecodedSample {
-    std::vector<SampleStereo> data;
+    // fixme: this struct is a makeshift solution to keep old code working,
+    // probably replace it with something else
+    struct StereoPair {
+        float l, r;
+    };
+
+    std::vector<StereoPair> data;
     float rate;
 };
 

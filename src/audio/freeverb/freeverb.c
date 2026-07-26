@@ -8,7 +8,7 @@
 #define undenormalize(n)
 
 
-static inline float xabs(float n) {
+static inline double xabs(double n) {
   return n < 0 ? -n : n;
 }
 
@@ -32,11 +32,11 @@ static inline double filter_coeff(double cutoff_hz, double sr)
 }
 
 
-static inline float allpass_process(fv_Allpass *ap, float input) {
-  float bufout = ap->buf[ap->bufidx];
+static inline double allpass_process(fv_Allpass *ap, double input) {
+  double bufout = ap->buf[ap->bufidx];
   undenormalize(bufout);
 
-  float output = -input + bufout;
+  double output = -input + bufout;
   ap->buf[ap->bufidx] = input + bufout * ap->feedback;
 
   if (++ap->bufidx >= ap->bufsize) {
@@ -47,8 +47,8 @@ static inline float allpass_process(fv_Allpass *ap, float input) {
 }
 
 
-static inline float comb_process(fv_Comb *cmb, float input) {
-  float output = cmb->buf[cmb->bufidx];
+static inline double comb_process(fv_Comb *cmb, double input) {
+  double output = cmb->buf[cmb->bufidx];
   undenormalize(output);
 
   cmb->filterstore = output * cmb->damp2 + cmb->filterstore * cmb->damp1;
@@ -64,7 +64,7 @@ static inline float comb_process(fv_Comb *cmb, float input) {
 }
 
 
-static inline void comb_set_damp(fv_Comb *cmb, float n) {
+static inline void comb_set_damp(fv_Comb *cmb, double n) {
   cmb->damp1 = n;
   cmb->damp2 = 1.0 - n;
 }
@@ -128,7 +128,7 @@ static void update(fv_Context *ctx) {
 }
 
 
-void fv_set_samplerate(fv_Context *ctx, float value) {
+void fv_set_samplerate(fv_Context *ctx, double value) {
   ctx->sr = value;
 
   const int combs[] = { 1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617 };
@@ -152,57 +152,57 @@ void fv_set_samplerate(fv_Context *ctx, float value) {
 }
 
 
-void fv_set_mode(fv_Context *ctx, float value) {
+void fv_set_mode(fv_Context *ctx, double value) {
   ctx->mode = value;
   update(ctx);
 }
 
 
-void fv_set_roomsize(fv_Context *ctx, float value) {
+void fv_set_roomsize(fv_Context *ctx, double value) {
   ctx->roomsize = value * FV_SCALEROOM + FV_OFFSETROOM;
   update(ctx);
 }
 
 
-void fv_set_damp(fv_Context *ctx, float value) {
+void fv_set_damp(fv_Context *ctx, double value) {
   ctx->damp = value * FV_SCALEDAMP;
   update(ctx);
 }
 
 
-void fv_set_wet(fv_Context *ctx, float value) {
+void fv_set_wet(fv_Context *ctx, double value) {
   ctx->wet = value * FV_SCALEWET;
   update(ctx);
 }
 
 
-void fv_set_dry(fv_Context *ctx, float value) {
+void fv_set_dry(fv_Context *ctx, double value) {
   ctx->dry = value * FV_SCALEDRY;
 }
 
 
-void fv_set_width(fv_Context *ctx, float value) {
+void fv_set_width(fv_Context *ctx, double value) {
   ctx->width = value;
   update(ctx);
 }
 
-void fv_set_lowpass(fv_Context *ctx, float value) {
+void fv_set_lowpass(fv_Context *ctx, double value) {
   ctx->lp_cutoff = value * value * 19980. + 20.;
   update(ctx);
 }
 
 
-void fv_set_highpass(fv_Context *ctx, float value) {
+void fv_set_highpass(fv_Context *ctx, double value) {
   ctx->hp_cutoff = value * value * 19980. + 20.;
   update(ctx);
 }
 
 
-void fv_process(fv_Context *ctx, float *buf, int n) {
+void fv_process(fv_Context *ctx, double *buf, int n) {
   for (int i = 0; i < n; i += 2) {
-    float outl = 0;
-    float outr = 0;
-    float input = (buf[i] + buf[i + 1]) * ctx->gain;
+    double outl = 0;
+    double outr = 0;
+    double input = (buf[i] + buf[i + 1]) * ctx->gain;
 
     /* accumulate comb filters in parallel */
     for (int i = 0; i < FV_NUMCOMBS; i++) {

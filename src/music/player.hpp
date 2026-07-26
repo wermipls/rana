@@ -313,10 +313,10 @@ public:
         return note_off && volume_actual < 0.001; // -60dB threshold
     }
 
-    inline static SampleStereo getSample(std::vector<SampleStereo> &s, size_t p)
+    inline static SampleStereo getSample(std::vector<DecodedSample::StereoPair> &s, size_t p)
     {
         if (p >= s.size()) return SampleStereo{0,0};
-        return s[p];
+        return { s[p].l, s[p].r };
     }
 
     std::vector<SampleStereo> getSamples(size_t n_samples)
@@ -468,8 +468,8 @@ public:
         Effect *instance = nullptr;
         using enum musfmt::EffectType;
         switch (effect.type) {
-            case Lowpass:    instance = new audio::Filter1Pole(sr, false); break;
-            case Highpass:   instance = new audio::Filter1Pole(sr, true); break;
+            case Lowpass:    instance = new audio::Lowpass(sr); break;
+            case Highpass:   instance = new audio::Highpass(sr); break;
             case Reverb:     instance = new audio::Reverb(sr); break;
             case Delay:      instance = new audio::Delay(sr); break;
             case Distortion: instance = new audio::Distortion(); break;
