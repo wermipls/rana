@@ -215,6 +215,27 @@ static inline T fast_sin_halfpi(T x)
     return u * x;
 }
 
+// Approximation of sin(x) on [-pi, pi].
+// uses similar method to https://mooooo.ooo/chebyshev-sine-approximation/
+// (archived link: https://archive.is/VyyYh)
+// but assumes f64 coefficients and arithmetic.
+template <typename T>
+static inline T fast_sin(const T x)
+{
+    // coefficients generated with
+    // ./lolremez --degree 5 --range "1e-50:pi*pi" "sin(sqrt(x))/sqrt(x)/(sqrt(x)-pi)/(sqrt(x)+pi)" "1/(sqrt(x))" --double
+    const auto x2 = x * x;
+           T u =  1.3132678020554575e-10;
+    u = u * x2 + -2.3274725289039816e-08;
+    u = u * x2 +  2.5218673277394069e-06;
+    u = u * x2 + -0.00017350322264963387;
+    u = u * x2 +  0.0066208762872755093;
+    u = u * x2 + -0.10132118175052347;
+
+    return (x - 3.14159265358979311599796346854 + 1.22464679914739511540935389571e-16) *
+           (x + 3.14159265358979311599796346854 - 1.22464679914739511540935389571e-16) * u * x;
+}
+
 // approximates tanh(x).
 // Formula taken from https://yaikhom.com/2020-04-28-localised-approximation-of-hyperbolic-tangents.html
 // Estimated max error: 9.61e-5 at x=4.97179

@@ -1057,63 +1057,37 @@ class Galactic : public Effect {
         "dry/wet",
     };
 
-    float sr;
+    double sr;
 
-    float iirAL;
-    float iirBL;
+    SampleStereo iirA;
+    SampleStereo iirB;
 
-    float aIL[6480];
-    float aJL[3660];
-    float aKL[1720];
-    float aLL[680];
+    SampleStereo aI[6480];
+    SampleStereo aJ[3660];
+    SampleStereo aK[1720];
+    SampleStereo aL[680];
 
-    float aAL[9700];
-    float aBL[6000];
-    float aCL[2320];
-    float aDL[940];
+    SampleStereo aA[9700];
+    SampleStereo aB[6000];
+    SampleStereo aC[2320];
+    SampleStereo aD[940];
 
-    float aEL[15220];
-    float aFL[8460];
-    float aGL[4540];
-    float aHL[3200];
+    SampleStereo aE[15220];
+    SampleStereo aF[8460];
+    SampleStereo aG[4540];
+    SampleStereo aH[3200];
 
-    float aML[3111];
-    float aMR[3111];
-    float oldfpd;
+    double aML[3111];
+    double aMR[3111];
 
-    float feedbackAL;
-    float feedbackBL;
-    float feedbackCL;
-    float feedbackDL;
+    SampleStereo feedbackA;
+    SampleStereo feedbackB;
+    SampleStereo feedbackC;
+    SampleStereo feedbackD;
 
-    float lastRefL[7];
-    float thunderL;
-
-    float iirAR;
-    float iirBR;
-
-    float aIR[6480];
-    float aJR[3660];
-    float aKR[1720];
-    float aLR[680];
-
-    float aAR[9700];
-    float aBR[6000];
-    float aCR[2320];
-    float aDR[940];
-
-    float aER[15220];
-    float aFR[8460];
-    float aGR[4540];
-    float aHR[3200];
-
-    float feedbackAR;
-    float feedbackBR;
-    float feedbackCR;
-    float feedbackDR;
-
-    float lastRefR[7];
-    float thunderR;
+    SampleStereo lastRef[7];
+    SampleStereo thunder;
+    double oldfpd;
 
     int countA, delayA;
     int countB, delayB;
@@ -1130,14 +1104,14 @@ class Galactic : public Effect {
     int countM, delayM;
     int cycle; // all these ints are shared across channels, not duplicated
 
-    float vibM;
+    double vibM;
 
     uint32_t fpdL;
     uint32_t fpdR;
 
     // internal constants, calculated every process call in original,
     // but i'd rather only recalculate them when necessary
-    float regen, attenuate, lowpass, drift, size, wet;
+    double regen, attenuate, lowpass, drift, size, wet;
     int cycleEnd;
 
     static constexpr auto A = 0;
@@ -1149,7 +1123,7 @@ class Galactic : public Effect {
 
     void update()
     {
-        float overallscale = 1.0f / 44100.0f * sr;
+        double overallscale = 1.0 / 44100.0 * sr;
 
         cycleEnd = floor(overallscale);
         if (cycleEnd < 1) cycleEnd = 1;
@@ -1157,25 +1131,25 @@ class Galactic : public Effect {
         // this is going to be 2 for 88.1 or 96k, 3 for silly people, 4 for 176 or 192k
         if (cycle > cycleEnd-1) cycle = cycleEnd - 1; // sanity check
 
-        regen = 0.0625f + ((1.0f - param[A]) * 0.0625f);
-        attenuate = (1.0f - (regen / 0.125f)) * 1.333f;
-        lowpass = pow(1.00001f - (1.0f - param[B]), 2.0f) / sqrt(overallscale);
-        drift = pow(param[C], 3) * 0.001f;
-        size = (param[D] * 1.77f) + 0.1f;
-        wet = 1.0f - pow(1.0f - param[E], 3);
+        regen = 0.0625 + ((1.0 - param[A]) * 0.0625);
+        attenuate = (1.0 - (regen / 0.125)) * 1.333;
+        lowpass = pow(1.00001 - (1.0 - param[B]), 2.0) / sqrt(overallscale);
+        drift = pow(param[C], 3) * 0.001;
+        size = (param[D] * 1.77) + 0.1;
+        wet = 1.0 - pow(1.0 - param[E], 3);
 
-        delayI = 3407.0f * size;
-        delayJ = 1823.0f * size;
-        delayK = 859.0f  * size;
-        delayL = 331.0f  * size;
-        delayA = 4801.0f * size;
-        delayB = 2909.0f * size;
-        delayC = 1153.0f * size;
-        delayD = 461.0f  * size;
-        delayE = 7607.0f * size;
-        delayF = 4217.0f * size;
-        delayG = 2269.0f * size;
-        delayH = 1597.0f * size;
+        delayI = 3407.0 * size;
+        delayJ = 1823.0 * size;
+        delayK = 859.0  * size;
+        delayL = 331.0  * size;
+        delayA = 4801.0 * size;
+        delayB = 2909.0 * size;
+        delayC = 1153.0 * size;
+        delayD = 461.0  * size;
+        delayE = 7607.0 * size;
+        delayF = 4217.0 * size;
+        delayG = 2269.0 * size;
+        delayH = 1597.0 * size;
         delayM = 256;
     }
 
@@ -1188,82 +1162,31 @@ public:
         param[D] = 1.0;
         param[E] = 1.0;
 
-        iirAL = 0.0;
-        iirAR = 0.0;
-        iirBL = 0.0;
-        iirBR = 0.0;
+        iirA = 0.0;
+        iirB = 0.0;
 
-        for (int count = 0; count < 6479; count++) {
-            aIL[count] = 0.0;
-            aIR[count] = 0.0;
-        }
-        for (int count = 0; count < 3659; count++) {
-            aJL[count] = 0.0;
-            aJR[count] = 0.0;
-        }
-        for (int count = 0; count < 1719; count++) {
-            aKL[count] = 0.0;
-            aKR[count] = 0.0;
-        }
-        for (int count = 0; count < 679; count++) {
-            aLL[count] = 0.0;
-            aLR[count] = 0.0;
-        }
+        for (auto &n : aI) { n = 0; }
+        for (auto &n : aJ) { n = 0; }
+        for (auto &n : aK) { n = 0; }
+        for (auto &n : aL) { n = 0; }
+        for (auto &n : aA) { n = 0; }
+        for (auto &n : aB) { n = 0; }
+        for (auto &n : aC) { n = 0; }
+        for (auto &n : aD) { n = 0; }
+        for (auto &n : aE) { n = 0; }
+        for (auto &n : aF) { n = 0; }
+        for (auto &n : aG) { n = 0; }
+        for (auto &n : aH) { n = 0; }
+        for (auto &n : aML) { n = 0; }
+        for (auto &n : aMR) { n = 0; }
 
-        for (int count = 0; count < 9699; count++) {
-            aAL[count] = 0.0;
-            aAR[count] = 0.0;
-        }
-        for (int count = 0; count < 5999; count++) {
-            aBL[count] = 0.0;
-            aBR[count] = 0.0;
-        }
-        for (int count = 0; count < 2319; count++) {
-            aCL[count] = 0.0;
-            aCR[count] = 0.0;
-        }
-        for (int count = 0; count < 939; count++) {
-            aDL[count] = 0.0;
-            aDR[count] = 0.0;
-        }
+        feedbackA = 0.0;
+        feedbackB = 0.0;
+        feedbackC = 0.0;
+        feedbackD = 0.0;
 
-        for (int count = 0; count < 15219; count++) {
-            aEL[count] = 0.0;
-            aER[count] = 0.0;
-        }
-        for (int count = 0; count < 8459; count++) {
-            aFL[count] = 0.0;
-            aFR[count] = 0.0;
-        }
-        for (int count = 0; count < 4539; count++) {
-            aGL[count] = 0.0;
-            aGR[count] = 0.0;
-        }
-        for (int count = 0; count < 3199; count++) {
-            aHL[count] = 0.0;
-            aHR[count] = 0.0;
-        }
-
-        for (int count = 0; count < 3110; count++) {
-            aML[count] = aMR[count] = 0.0;
-        }
-
-        feedbackAL = 0.0;
-        feedbackAR = 0.0;
-        feedbackBL = 0.0;
-        feedbackBR = 0.0;
-        feedbackCL = 0.0;
-        feedbackCR = 0.0;
-        feedbackDL = 0.0;
-        feedbackDR = 0.0;
-
-        for (int count = 0; count < 6; count++) {
-            lastRefL[count] = 0.0;
-            lastRefR[count] = 0.0;
-        }
-
-        thunderL = 0;
-        thunderR = 0;
+        for (auto &n : lastRef) { n = 0; }
+        thunder = 0;
 
         countI = 1;
         countJ = 1;
@@ -1323,66 +1246,53 @@ public:
 
     virtual void process(SampleStereo *in, size_t n_samples)
     {
-        // FIXME: vectorize this, revert back to double processing.
         ZoneScopedN("Galactic");
-        auto in1 = &in->l;
-        auto in2 = &in->r;
-        auto out1 = in1;
-        auto out2 = in2;
-
         for (size_t i = 0; i < n_samples; i++) {
-            auto inputSampleL = *in1;
-            auto inputSampleR = *in2;
-            if (fabs(inputSampleL) < 1.18e-23f) inputSampleL = fpdL * 1.18e-17f;
-            if (fabs(inputSampleR) < 1.18e-23f) inputSampleR = fpdR * 1.18e-17f;
-            auto drySampleL = inputSampleL;
-            auto drySampleR = inputSampleR;
+            auto inputSample = in[i];
+            if (abs(inputSample.l) < 1.18e-23) inputSample.l = fpdL * 1.18e-17;
+            if (abs(inputSample.r) < 1.18e-23) inputSample.r = fpdR * 1.18e-17;
+            auto drySample = inputSample;
 
             vibM += (oldfpd * drift);
-            if (vibM > (pi * 2.0f)) {
-                vibM = 0.0f;
-                oldfpd = 0.4294967295f + (fpdL * 0.0000000000618f);
+            if (vibM > pi) {
+                vibM = -pi;
+                oldfpd = 0.4294967295 + (fpdL * 0.0000000000618);
             }
 
-            aML[countM] = inputSampleL * attenuate;
-            aMR[countM] = inputSampleR * attenuate;
+            aML[countM] = inputSample.l * attenuate;
+            aMR[countM] = inputSample.r * attenuate;
             countM++;
             if (countM < 0 || countM > delayM) countM = 0;
 
-            float offsetML = (sin(vibM) + 1.0f) * 127.0f;
-            float offsetMR = (sin(vibM + (pi / 2.0f)) + 1.0) * 127.0f;
-            int workingML = countM + offsetML;
-            int workingMR = countM + offsetMR;
-            float interpolML = (aML[workingML - ((workingML > delayM) ? delayM + 1 : 0)]
-                             * (1 - (offsetML - floor(offsetML))));
-            interpolML += (aML[workingML + 1 - ((workingML + 1 > delayM) ? delayM + 1 : 0)]
-                        * ((offsetML - floor(offsetML))));
-            float interpolMR = (aMR[workingMR - ((workingMR > delayM) ? delayM + 1 : 0)]
-                             * (1 - (offsetMR - floor(offsetMR))));
-            interpolMR +=
-                (aMR[workingMR + 1 - ((workingMR + 1 > delayM) ? delayM + 1 : 0)] *
-                 ((offsetMR - floor(offsetMR))));
-            inputSampleL = interpolML;
-            inputSampleR = interpolMR;
+            auto xl = vibM;
+            auto xr = vibM + pi / 2.0;
+            if (xr > pi) xr -= pi * 2.0;
+            auto x = SampleStereo(xl, xr);
+            auto sin_x = fast_sin(x);
+            auto offsetM = (sin_x + 1.0) * 127.0;
+            int workingML = countM + offsetM.l;
+            int workingMR = countM + offsetM.r;
+            auto t = offsetM - floor(offsetM);
+            // fixme: not pretty.
+            SampleStereo y0 = { aML[workingML - ((workingML > delayM) ? delayM + 1 : 0)],
+                                aMR[workingMR - ((workingMR > delayM) ? delayM + 1 : 0)] };
+            SampleStereo y1 = { aML[workingML + 1 - ((workingML + 1 > delayM) ? delayM + 1 : 0)],
+                                aMR[workingMR + 1 - ((workingMR + 1 > delayM) ? delayM + 1 : 0)] };
+            auto interpolM = y0 * (SampleStereo(1.0) - t) + y1 * t;
+            inputSample = interpolM;
             // predelay that applies vibrato
             // want vibrato speed AND depth like in MatrixVerb
 
-            iirAL = (iirAL * (1.0 - lowpass)) + (inputSampleL * lowpass);
-            inputSampleL = iirAL;
-            iirAR = (iirAR * (1.0 - lowpass)) + (inputSampleR * lowpass);
-            inputSampleR = iirAR;
+            iirA = (iirA * (1.0 - lowpass)) + (inputSample * lowpass);
+            inputSample = iirA;
             // initial filter
 
             cycle++;
             if (cycle == cycleEnd) { // hit the end point and we do a reverb sample
-                aIL[countI] = inputSampleL + (feedbackAR * regen);
-                aJL[countJ] = inputSampleL + (feedbackBR * regen);
-                aKL[countK] = inputSampleL + (feedbackCR * regen);
-                aLL[countL] = inputSampleL + (feedbackDR * regen);
-                aIR[countI] = inputSampleR + (feedbackAL * regen);
-                aJR[countJ] = inputSampleR + (feedbackBL * regen);
-                aKR[countK] = inputSampleR + (feedbackCL * regen);
-                aLR[countL] = inputSampleR + (feedbackDL * regen);
+                aI[countI] = inputSample + (feedbackA * regen);
+                aJ[countJ] = inputSample + (feedbackB * regen);
+                aK[countK] = inputSample + (feedbackC * regen);
+                aL[countL] = inputSample + (feedbackD * regen);
 
                 countI++;
                 if (countI < 0 || countI > delayI) countI = 0;
@@ -1393,24 +1303,16 @@ public:
                 countL++;
                 if (countL < 0 || countL > delayL) countL = 0;
 
-                float outIL = aIL[countI - ((countI > delayI) ? delayI + 1 : 0)];
-                float outJL = aJL[countJ - ((countJ > delayJ) ? delayJ + 1 : 0)];
-                float outKL = aKL[countK - ((countK > delayK) ? delayK + 1 : 0)];
-                float outLL = aLL[countL - ((countL > delayL) ? delayL + 1 : 0)];
-                float outIR = aIR[countI - ((countI > delayI) ? delayI + 1 : 0)];
-                float outJR = aJR[countJ - ((countJ > delayJ) ? delayJ + 1 : 0)];
-                float outKR = aKR[countK - ((countK > delayK) ? delayK + 1 : 0)];
-                float outLR = aLR[countL - ((countL > delayL) ? delayL + 1 : 0)];
+                auto outI = aI[countI - ((countI > delayI) ? delayI + 1 : 0)];
+                auto outJ = aJ[countJ - ((countJ > delayJ) ? delayJ + 1 : 0)];
+                auto outK = aK[countK - ((countK > delayK) ? delayK + 1 : 0)];
+                auto outL = aL[countL - ((countL > delayL) ? delayL + 1 : 0)];
                 // first block: now we have four outputs
 
-                aAL[countA] = (outIL - (outJL + outKL + outLL));
-                aBL[countB] = (outJL - (outIL + outKL + outLL));
-                aCL[countC] = (outKL - (outIL + outJL + outLL));
-                aDL[countD] = (outLL - (outIL + outJL + outKL));
-                aAR[countA] = (outIR - (outJR + outKR + outLR));
-                aBR[countB] = (outJR - (outIR + outKR + outLR));
-                aCR[countC] = (outKR - (outIR + outJR + outLR));
-                aDR[countD] = (outLR - (outIR + outJR + outKR));
+                aA[countA] = (outI - (outJ + outK + outL));
+                aB[countB] = (outJ - (outI + outK + outL));
+                aC[countC] = (outK - (outI + outJ + outL));
+                aD[countD] = (outL - (outI + outJ + outK));
 
                 countA++;
                 if (countA < 0 || countA > delayA) countA = 0;
@@ -1421,24 +1323,16 @@ public:
                 countD++;
                 if (countD < 0 || countD > delayD) countD = 0;
 
-                float outAL = aAL[countA - ((countA > delayA) ? delayA + 1 : 0)];
-                float outBL = aBL[countB - ((countB > delayB) ? delayB + 1 : 0)];
-                float outCL = aCL[countC - ((countC > delayC) ? delayC + 1 : 0)];
-                float outDL = aDL[countD - ((countD > delayD) ? delayD + 1 : 0)];
-                float outAR = aAR[countA - ((countA > delayA) ? delayA + 1 : 0)];
-                float outBR = aBR[countB - ((countB > delayB) ? delayB + 1 : 0)];
-                float outCR = aCR[countC - ((countC > delayC) ? delayC + 1 : 0)];
-                float outDR = aDR[countD - ((countD > delayD) ? delayD + 1 : 0)];
+                auto outA = aA[countA - ((countA > delayA) ? delayA + 1 : 0)];
+                auto outB = aB[countB - ((countB > delayB) ? delayB + 1 : 0)];
+                auto outC = aC[countC - ((countC > delayC) ? delayC + 1 : 0)];
+                auto outD = aD[countD - ((countD > delayD) ? delayD + 1 : 0)];
                 // second block: four more outputs
 
-                aEL[countE] = (outAL - (outBL + outCL + outDL));
-                aFL[countF] = (outBL - (outAL + outCL + outDL));
-                aGL[countG] = (outCL - (outAL + outBL + outDL));
-                aHL[countH] = (outDL - (outAL + outBL + outCL));
-                aER[countE] = (outAR - (outBR + outCR + outDR));
-                aFR[countF] = (outBR - (outAR + outCR + outDR));
-                aGR[countG] = (outCR - (outAR + outBR + outDR));
-                aHR[countH] = (outDR - (outAR + outBR + outCR));
+                aE[countE] = (outA - (outB + outC + outD));
+                aF[countF] = (outB - (outA + outC + outD));
+                aG[countG] = (outC - (outA + outB + outD));
+                aH[countH] = (outD - (outA + outB + outC));
 
                 countE++;
                 if (countE < 0 || countE > delayE) countE = 0;
@@ -1449,101 +1343,61 @@ public:
                 countH++;
                 if (countH < 0 || countH > delayH) countH = 0;
 
-                float outEL = aEL[countE - ((countE > delayE) ? delayE + 1 : 0)];
-                float outFL = aFL[countF - ((countF > delayF) ? delayF + 1 : 0)];
-                float outGL = aGL[countG - ((countG > delayG) ? delayG + 1 : 0)];
-                float outHL = aHL[countH - ((countH > delayH) ? delayH + 1 : 0)];
-                float outER = aER[countE - ((countE > delayE) ? delayE + 1 : 0)];
-                float outFR = aFR[countF - ((countF > delayF) ? delayF + 1 : 0)];
-                float outGR = aGR[countG - ((countG > delayG) ? delayG + 1 : 0)];
-                float outHR = aHR[countH - ((countH > delayH) ? delayH + 1 : 0)];
+                auto outE = aE[countE - ((countE > delayE) ? delayE + 1 : 0)];
+                auto outF = aF[countF - ((countF > delayF) ? delayF + 1 : 0)];
+                auto outG = aG[countG - ((countG > delayG) ? delayG + 1 : 0)];
+                auto outH = aH[countH - ((countH > delayH) ? delayH + 1 : 0)];
                 // third block: final outputs
 
-                feedbackAL = (outEL - (outFL + outGL + outHL));
-                feedbackBL = (outFL - (outEL + outGL + outHL));
-                feedbackCL = (outGL - (outEL + outFL + outHL));
-                feedbackDL = (outHL - (outEL + outFL + outGL));
-                feedbackAR = (outER - (outFR + outGR + outHR));
-                feedbackBR = (outFR - (outER + outGR + outHR));
-                feedbackCR = (outGR - (outER + outFR + outHR));
-                feedbackDR = (outHR - (outER + outFR + outGR));
+                feedbackA = (outE - (outF + outG + outH));
+                feedbackB = (outF - (outE + outG + outH));
+                feedbackC = (outG - (outE + outF + outH));
+                feedbackD = (outH - (outE + outF + outG));
                 // which we need to feed back into the input again, a bit
 
-                inputSampleL = (outEL + outFL + outGL + outHL) / 8.0f;
-                inputSampleR = (outER + outFR + outGR + outHR) / 8.0f;
+                inputSample = (outE + outF + outG + outH) / 8.0;
                 // and take the final combined sum of outputs
-                if (cycleEnd == 4) {
-                    lastRefL[0] = lastRefL[4]; // start from previous last
-                    lastRefL[2] = (lastRefL[0] + inputSampleL) / 2; // half
-                    lastRefL[1] = (lastRefL[0] + lastRefL[2]) / 2;  // one quarter
-                    lastRefL[3] = (lastRefL[2] + inputSampleL) / 2; // three quarters
-                    lastRefL[4] = inputSampleL;                     // full
-                    lastRefR[0] = lastRefR[4]; // start from previous last
-                    lastRefR[2] = (lastRefR[0] + inputSampleR) / 2; // half
-                    lastRefR[1] = (lastRefR[0] + lastRefR[2]) / 2;  // one quarter
-                    lastRefR[3] = (lastRefR[2] + inputSampleR) / 2; // three quarters
-                    lastRefR[4] = inputSampleR;                     // full
-                }
-                if (cycleEnd == 3) {
-                    lastRefL[0] = lastRefL[3]; // start from previous last
-                    lastRefL[2] = (lastRefL[0] + lastRefL[0] + inputSampleL) / 3; // third
-                    lastRefL[1] = (lastRefL[0] + inputSampleL + inputSampleL) / 3; // two thirds
-                    lastRefL[3] = inputSampleL; // full
-                    lastRefR[0] = lastRefR[3]; // start from previous last
-                    lastRefR[2] = (lastRefR[0] + lastRefR[0] + inputSampleR) / 3; // third
-                    lastRefR[1] = (lastRefR[0] + inputSampleR + inputSampleR) / 3; // two thirds
-                    lastRefR[3] = inputSampleR;                          // full
-                }
-                if (cycleEnd == 2) {
-                    lastRefL[0] = lastRefL[2]; // start from previous last
-                    lastRefL[1] = (lastRefL[0] + inputSampleL) / 2; // half
-                    lastRefL[2] = inputSampleL;                     // full
-                    lastRefR[0] = lastRefR[2]; // start from previous last
-                    lastRefR[1] = (lastRefR[0] + inputSampleR) / 2; // half
-                    lastRefR[2] = inputSampleR;                     // full
-                }
                 if (cycleEnd == 1) {
-                    lastRefL[0] = inputSampleL;
-                    lastRefR[0] = inputSampleR;
+                    lastRef[0] = inputSample;
+                } else if (cycleEnd == 2) {
+                    lastRef[0] = lastRef[2]; // start from previous last
+                    lastRef[1] = (lastRef[0] + inputSample) / 2; // half
+                    lastRef[2] = inputSample;                    // full
+                } else if (cycleEnd == 3) {
+                    lastRef[0] = lastRef[3]; // start from previous last
+                    lastRef[2] = (lastRef[0] + lastRef[0] + inputSample) / 3;  // third
+                    lastRef[1] = (lastRef[0] + inputSample + inputSample) / 3; // two thirds
+                    lastRef[3] = inputSample;                                  // full
+                } else if (cycleEnd == 4) {
+                    lastRef[0] = lastRef[4]; // start from previous last
+                    lastRef[2] = (lastRef[0] + inputSample) / 2; // half
+                    lastRef[1] = (lastRef[0] + lastRef[2]) / 2;  // one quarter
+                    lastRef[3] = (lastRef[2] + inputSample) / 2; // three quarters
+                    lastRef[4] = inputSample;                    // full
                 }
                 cycle = 0; // reset
-                inputSampleL = lastRefL[cycle];
-                inputSampleR = lastRefR[cycle];
+                inputSample = lastRef[cycle];
             } else {
-                inputSampleL = lastRefL[cycle];
-                inputSampleR = lastRefR[cycle];
+                inputSample = lastRef[cycle];
                 // we are going through our references now
             }
 
-            iirBL = (iirBL * (1.0f - lowpass)) + (inputSampleL * lowpass);
-            inputSampleL = iirBL;
-            iirBR = (iirBR * (1.0f - lowpass)) + (inputSampleR * lowpass);
-            inputSampleR = iirBR;
+            iirB = (iirB * (1.0 - lowpass)) + (inputSample * lowpass);
+            inputSample = iirB;
             // end filter
 
-            if (wet < 1.0f) {
-                inputSampleL = (inputSampleL * wet) + (drySampleL * (1.0f - wet));
-                inputSampleR = (inputSampleR * wet) + (drySampleR * (1.0f - wet));
-            }
+            inputSample = (inputSample * wet) + (drySample * (1.0 - wet));
 
-            /*
-            //begin 32 bit stereo floating point dither
-            int expon; frexpf((float)inputSampleL, &expon);
+            //begin 64 bit stereo floating point dither
+            //int expon; frexp((double)inputSampleL, &expon);
             fpdL ^= fpdL << 13; fpdL ^= fpdL >> 17; fpdL ^= fpdL << 5;
-            inputSampleL += ((double(fpdL)-uint32_t(0x7fffffff)) * 5.5e-36l *
-            pow(2,expon+62)); frexpf((float)inputSampleR, &expon); fpdR ^= fpdR << 13;
-            fpdR ^= fpdR >> 17; fpdR ^= fpdR << 5; inputSampleR +=
-            ((double(fpdR)-uint32_t(0x7fffffff)) * 5.5e-36l * pow(2,expon+62));
-            //end 32 bit stereo floating point dither
-            */
+            //inputSampleL += ((double(fpdL)-uint32_t(0x7fffffff)) * 1.1e-44l * pow(2,expon+62));
+            //frexp((double)inputSampleR, &expon);
+            fpdR ^= fpdR << 13; fpdR ^= fpdR >> 17; fpdR ^= fpdR << 5;
+            //inputSampleR += ((double(fpdR)-uint32_t(0x7fffffff)) * 1.1e-44l * pow(2,expon+62));
+            //end 64 bit stereo floating point dither
 
-            *out1 = inputSampleL;
-            *out2 = inputSampleR;
-
-            in1 += 2;
-            in2 += 2;
-            out1 += 2;
-            out2 += 2;
+            in[i] = inputSample;
         }
     }
 };
