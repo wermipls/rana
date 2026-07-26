@@ -34,6 +34,8 @@ There's an "auto fade" option, which applies a fade in+out to a sample. The 1-ta
 
 The maximum number of sample voices an instrument can play on a single note column (think release tails, or NNA of `Continue`) is 12. The sample voices are shared across the entire instrument, so if you e.g. have 12 different samples playing in an instrument at the same time, it essentially turns monophonic.[^1] This is easy to implement and simplifies channel state allocation.
 
+Oversampling appears to be 2x. Enabling oversampling introduces a delay of 8 samples, as the delay introduced by the FIR decimator is not compensated for.
+
 [^1]: It also has a funny consequence: if an instrument has more than 12 samples assigned to the same note, a note event will only play the 12 last ones. "imagine someone doing manual additive synthesis in renoise with the sampler and getting mad at this"
 
 ## Modulation
