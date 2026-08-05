@@ -40,9 +40,9 @@ Oversampling appears to be 2x. Enabling oversampling introduces a delay of 8 sam
 
 ## Modulation
 
-Modulation appears to be processed at intervals of 1/256th of the tempo (so e.g. for 120BPM, modulation gets processed at a rate of 512 Hz). `Volume`, `Panning`, and `Drive` are ramped linearly between points. `Cutoff` and `Resonance` appear to use some single-tap smoothing coeffecient instead[^2]. `Pitch` is not interpolated at all.
+Modulation appears to be processed at intervals of 1/256th of the tempo (so e.g. for 120BPM, modulation gets processed at a rate of 512 Hz). `Volume`, `Panning`, and `Drive` are ramped linearly between points. `Cutoff` and `Resonance` appear to use some single-tap smoothing coefficient instead[^2]. `Pitch` is not interpolated at all.
 
-[^2]: This may be inherent to the filters themselves, rather than the modulation system. However, the coefficient present in the `Analog Filter` effect is different and smoothes parameters much more aggresively, even at the "Instant" inertia setting.
+[^2]: This may be inherent to the filters themselves, rather than the modulation system. However, the coefficient present in the `Analog Filter` effect is different and smooths parameters much more aggressively, even at the "Instant" inertia setting.
 
 Modulation devices modulate the input with an operand of choice. Since division is available, it's possible to reach values such as infinity (positive and negative) and NaN. By the end of the modulation chain, infinity (regardless of sign) gets substituted with max value, while NaN gets substituted by zero. The values always get clamped. The range is 0 to 1.0 for `Cutoff`, `Resonance` and `Drive`. For `Panning` and `Pitch`, the range is instead -1.0 to 1.0. Volumes range from 0.0 to 4.0 (about +24.08dB). There is a limit of 12 modulation devices per target.
 
@@ -136,7 +136,7 @@ tick 2:   1  +   4 = 5
 
 Slides pitch up or down, where `xx` are 1/16ths of a semitone over the span of a line. `xx` of `00` is a special case that reuses previous slide value. Slide value is remembered on an FX row basis.
 
-Specifically, it finalizes the slide and reaches the target pitch on the last tick of the line, in increments of `xx / (ticks_per_line - 1)`. If a slide is already occuring, the increment happens on the first tick of the line as well, with increments instead being `xx / ticks_per_line`. For instance:
+Specifically, it finalizes the slide and reaches the target pitch on the last tick of the line, in increments of `xx / (ticks_per_line - 1)`. If a slide is already occurring, the increment happens on the first tick of the line as well, with increments instead being `xx / ticks_per_line`. For instance:
 
 ```
    | Note   | FX   FX  
