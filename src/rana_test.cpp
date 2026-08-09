@@ -4,3 +4,4 @@
 // all headers with tests.
 #include "containers/bitmask_ringbuf.hpp"
 #include "containers/linear_ringbuf.hpp"
+#include "serializer.hpp"

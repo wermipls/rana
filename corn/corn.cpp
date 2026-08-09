@@ -953,14 +953,15 @@ int main(int argc, char **argv)
 
     print_samples_by_size(song.sampledata);
 
-    auto ser = Serializer();
-    song.serialize(ser);
-
-    log::info("writing output to '%s'...", outfile);
-    auto serialized = ser.data();
-    auto bytes = rana::writefile(serialized, outfile);
-    log::info("wrote %d bytes.", bytes);
-
     std::free(xml);
-    return 0;
+
+    std::vector<uint8_t> serialized;
+    if (serialize_into_vector(song, serialized)) {
+        log::info("writing output to '%s'...", outfile);
+        auto bytes = rana::writefile(serialized, outfile);
+        log::info("wrote %d bytes.", bytes);
+        return 0;
+    } else {
+        return 1;
+    }
 }

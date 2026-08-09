@@ -45,13 +45,13 @@ struct SampleData {
 
     void serialize(Serializer &s)
     {
-        s.int8((uint8_t *)&codec);
+        s.int8((uint8_t &)codec);
         if (codec == Codec::Opus) {
-            s.float32(&sr);
-            s.int32(&length);
-            s.int16(&start_offset);
+            s.float32(sr);
+            s.int32(length);
+            s.int16(start_offset);
         }
-        s.vector(data);
+        s.bytes(data);
     }
 };
 
@@ -68,15 +68,15 @@ struct Sample {
 
     void serialize(Serializer &s)
     {
-        s.float32(&volume);
-        s.float32(&pan);
-        s.int8(&transpose);
-        s.int8(&fine);
-        s.int8((uint8_t *)&interpolation);
-        s.int8((uint8_t *)&loop_mode);
-        s.int32(&loop_start);
-        s.int32(&loop_end);
-        s.int32(&sampledata_id);
+        s.float32(volume);
+        s.float32(pan);
+        s.int8(transpose);
+        s.int8(fine);
+        s.int8((uint8_t &)interpolation);
+        s.int8((uint8_t &)loop_mode);
+        s.int32(loop_start);
+        s.int32(loop_end);
+        s.int32(sampledata_id);
     }
 };
 
@@ -89,11 +89,11 @@ struct ADSR {
 
     void serialize(Serializer &s)
     {
-        s.float32(&attack);
-        s.float32(&hold);
-        s.float32(&decay);
-        s.float32(&sustain);
-        s.float32(&release);
+        s.float32(attack);
+        s.float32(hold);
+        s.float32(decay);
+        s.float32(sustain);
+        s.float32(release);
     }
 };
 
@@ -103,13 +103,7 @@ struct Instrument {
 
     void serialize(Serializer &s)
     {
-        uint32_t size = smp.size();
-        s.int32(&size);
-        smp.resize(size);
-        for (auto &n : smp) {
-            n.serialize(s);
-        }
-
+        s.vector(smp);
         adsr_volume.serialize(s);
     }
 };
@@ -132,14 +126,8 @@ struct Effect {
 
     void serialize(Serializer &s)
     {
-        s.int8((uint8_t *)&type);
-
-        uint8_t size = param.size();
-        s.int8(&size);
-        param.resize(size);
-        for (auto &n : param) {
-            s.float32(&n);
-        }
+        s.int8((uint8_t &)type);
+        s.vector(param);
     }
 };
 
@@ -154,16 +142,10 @@ struct MixerTrack {
     void serialize(Serializer &s)
     {
         s.string8(name);
-        s.int8(&columns);
-        s.float32(&volume);
-        s.float32(&pan);
-
-        uint8_t size = fx.size();
-        s.int8(&size);
-        fx.resize(size);
-        for (auto &n : fx) {
-            n.serialize(s);
-        }
+        s.int8(columns);
+        s.float32(volume);
+        s.float32(pan);
+        s.vector(fx);
     }
 };
 
@@ -174,25 +156,9 @@ struct Mixer {
 
     void serialize(Serializer &s)
     {
-        s.float32(&master_volume);
-
-        { // tracks
-            uint8_t size = tracks.size();
-            s.int8(&size);
-            tracks.resize(size);
-            for (auto &n : tracks) {
-                n.serialize(s);
-            }
-        }
-
-        { // master fx
-            uint8_t size = master_fx.size();
-            s.int8(&size);
-            master_fx.resize(size);
-            for (auto &n : master_fx) {
-                n.serialize(s);
-            }
-        }
+        s.float32(master_volume);
+        s.vector(tracks);
+        s.vector(master_fx);
     }
 };
 
@@ -232,10 +198,10 @@ struct Command {
 
     void serialize(Serializer &s)
     {
-        s.int8((uint8_t *)&type);
-        s.int8(&param_xy);
+        s.int8((uint8_t &)type);
+        s.int8(param_xy);
         if (type == CommandType::FxMixerEffectParam) {
-            s.int8(&mixerfx_value);
+            s.int8(mixerfx_value);
         }
     }
 };
@@ -245,12 +211,7 @@ struct PatternChannel {
 
     void serialize(Serializer &s)
     {
-        uint16_t size = rows.size();
-        s.int16(&size);
-        rows.resize(size);
-        for (auto &n : rows) {
-            n.serialize(s);
-        }
+        s.vector(rows);
     }
 };
 
@@ -260,14 +221,8 @@ struct Pattern {
 
     void serialize(Serializer &s)
     {
-        uint8_t size = ch.size();
-        s.int8(&size);
-        ch.resize(size);
-        for (auto &n : ch) {
-            n.serialize(s);
-        }
-
-        s.int16(&lines);
+        s.vector(ch);
+        s.int16(lines);
     }
 };
 
@@ -285,50 +240,16 @@ struct Song {
 
     void serialize(Serializer &s)
     {
-        s.float32(&bpm);
-        s.int8(&beat_lines);
-        s.int8(&line_ticks);
-
-        { // instruments
-            uint32_t size = ins.size();
-            s.int32(&size);
-            ins.resize(size);
-            for (auto &n : ins) {
-                n.serialize(s);
-            }
-        }
-
+        s.float32(bpm);
+        s.int8(beat_lines);
+        s.int8(line_ticks);
+        s.vector(ins);
         mixer.serialize(s);
-
-        { // patterns
-            uint8_t size = patterns.size();
-            s.int8(&size);
-            patterns.resize(size);
-            for (auto &n : patterns) {
-                n.serialize(s);
-            }
-        }
-
-        { // sequence
-            uint8_t size = sequence.size();
-            s.int8(&size);
-            sequence.resize(size);
-            for (auto &n : sequence) {
-                s.int8(&n);
-            }
-        }
-
-        { // samples
-            uint16_t size = sampledata.size();
-            s.int16(&size);
-            sampledata.resize(size);
-            for (auto &n : sampledata) {
-                n.serialize(s);
-            }
-        }
-
-        s.int8(&loop_start);
-        s.int8(&loop_end);
+        s.vector(patterns);
+        s.bytes(sequence);
+        s.vector(sampledata);
+        s.int8(loop_start);
+        s.int8(loop_end);
     }
 };
 
