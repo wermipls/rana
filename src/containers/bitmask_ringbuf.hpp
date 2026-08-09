@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <doctest.h>
 
 namespace rana {
 
@@ -29,5 +30,27 @@ public:
     void push(const T &v) { buf[(offset + sz) & mask] = v; offset++; }
     void push(T &&v)      { buf[(offset + sz) & mask] = v; offset++; }
 };
+
+TEST_CASE("BitmaskRingBuf - smoke test") {
+    BitmaskRingBuf<int, 5> rb = {};
+
+    for (int i = 0; i < 9; i++) {
+        rb.push(i);
+    }
+
+    CHECK(rb[0] == 4);
+    CHECK(rb[1] == 5);
+    CHECK(rb[2] == 6);
+    CHECK(rb[3] == 7);
+    CHECK(rb[4] == 8);
+
+    rb.push(42);
+
+    CHECK(rb[0] == 5);
+    CHECK(rb[1] == 6);
+    CHECK(rb[2] == 7);
+    CHECK(rb[3] == 8);
+    CHECK(rb[4] == 42);
+}
 
 } // namespace rana

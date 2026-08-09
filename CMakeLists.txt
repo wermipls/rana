@@ -10,6 +10,8 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(BUILD_SHARED_LIBS OFF)
 
+add_library(rana_common INTERFACE)
+
 include(ExternalProject)
 
 add_executable(rana WIN32
@@ -34,6 +36,10 @@ add_executable(rana WIN32
     tracy/public/TracyClient.cpp
 )
 
+add_executable(rana_test
+    src/rana_test.cpp
+)
+
 # compile flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_DEBUG "-g")
@@ -46,10 +52,10 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "-s")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
 
-target_link_libraries(rana -static-libgcc -static-libstdc++ -fdiagnostics-color=always)
-target_compile_options(rana PRIVATE -ggdb -fdiagnostics-color=always)
+target_link_libraries(rana_common INTERFACE -static-libgcc -static-libstdc++ -fdiagnostics-color=always)
+target_compile_options(rana_common INTERFACE -ggdb -fdiagnostics-color=always)
 if(WIN32)
-    target_link_libraries(rana -static)
+    target_link_libraries(rana_common INTERFACE -static)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -69,10 +75,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 if(MSVC)
-  target_compile_options(rana PRIVATE /W4)
+  target_compile_options(rana_common INTERFACE /W4)
 else()
-  target_compile_options(rana PRIVATE -Wall -Wextra -Wpedantic)
-  target_compile_options(rana PRIVATE -fmacro-prefix-map=${PROJECT_SOURCE_DIR}=rana)
+  target_compile_options(rana_common INTERFACE -Wall -Wextra -Wpedantic)
+  target_compile_options(rana_common INTERFACE -fmacro-prefix-map=${PROJECT_SOURCE_DIR}=rana)
   string(APPEND CMAKE_CXX_FLAGS " -ffunction-sections -fdata-sections")
   string(APPEND CMAKE_C_FLAGS " -ffunction-sections -fdata-sections")
   string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,--gc-sections")
@@ -106,7 +112,7 @@ option(SDL_SENSOR "" OFF)
 option(SDL_TEST_LIBRARY "" OFF)
 option(SDL_VULKAN "" OFF)
 add_subdirectory(SDL EXCLUDE_FROM_ALL)
-target_link_libraries(rana SDL3::SDL3)
+target_link_libraries(rana_common INTERFACE SDL3::SDL3)
 # for some reason, SDL_LEAN_AND_MEAN cmake switch is only exposed for
 # the ngage build, so we have to set it like this
 sdl_compile_definitions(PRIVATE SDL_LEAN_AND_MEAN)
@@ -115,7 +121,7 @@ sdl_compile_definitions(PRIVATE SDL_LEAN_AND_MEAN)
 if (NOT TARGET opus)
     add_subdirectory(opus opus)
 endif()
-target_link_libraries(rana opus)
+target_link_libraries(rana_common INTERFACE opus)
 
 # PhysicsFS
 option(PHYSFS_ARCHIVE_ZIP "" ON)
@@ -137,7 +143,7 @@ set(PHYSFS_TARGETNAME_UNINSTALL "physfs_uninstall" CACHE STRING "")
 if (NOT TARGET PhysicsFS)
     add_subdirectory(physfs physfs EXCLUDE_FROM_ALL)
 endif()
-target_link_libraries(rana PhysFS::PhysFS-static)
+target_link_libraries(rana_common INTERFACE PhysFS::PhysFS-static)
 
 # libjxl
 option(RANA_ENABLE_JXL "enable JPEG XL image decoder" ON)
@@ -165,23 +171,23 @@ if(RANA_ENABLE_JXL)
     option(JPEGXL_ENABLE_HWY_SSE4 "" OFF)
 
     add_subdirectory(libjxl libjxl EXCLUDE_FROM_ALL)
-    target_link_libraries(rana jxl_dec)
-    target_compile_definitions(rana PRIVATE RANA_ENABLE_JXL)
+    target_link_libraries(rana_common INTERFACE jxl_dec)
+    target_compile_definitions(rana_common INTERFACE RANA_ENABLE_JXL)
 endif()
 
 # imgui
-target_include_directories(rana PRIVATE imgui)
-target_include_directories(rana PRIVATE imgui/backends)
+target_include_directories(rana_common INTERFACE imgui)
+target_include_directories(rana_common INTERFACE imgui/backends)
 
 # tracy
-target_include_directories(rana PRIVATE tracy/public)
+target_include_directories(rana_common INTERFACE tracy/public)
 if(MSYS OR MINGW)
-    target_link_libraries(rana ws2_32 dbghelp)
+    target_link_libraries(rana_common INTERFACE ws2_32 dbghelp)
 endif()
 
 # glm
 add_subdirectory(glm glm)
-target_link_libraries(rana glm::glm)
+target_link_libraries(rana_common INTERFACE glm::glm)
 
 # LuaJIT
 option(
@@ -203,15 +209,20 @@ add_dependencies(LuaJIT luajit)
 target_include_directories(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src")
 target_link_libraries(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a")
 
-target_include_directories(rana PUBLIC "${CMAKE_SOURCE_DIR}/LuaJIT")
-target_link_libraries(rana LuaJIT)
+target_include_directories(rana_common INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT")
+target_link_libraries(rana_common INTERFACE LuaJIT)
 
 # sol
-target_include_directories(rana PRIVATE sol2/include)
+target_include_directories(rana_common INTERFACE sol2/include)
+
+# doctest
+add_subdirectory(doctest)
+target_link_libraries(rana_common INTERFACE doctest)
+target_compile_definitions(rana PUBLIC DOCTEST_CONFIG_DISABLE) # no tests in main build.
 
 # others
-target_include_directories(rana PRIVATE src)
-target_include_directories(rana PRIVATE external)
+target_include_directories(rana_common INTERFACE src)
+target_include_directories(rana_common INTERFACE external)
 
 # configuration toggles
 option(RANA_BUILD_CORN "build the 'corn' converter tool" OFF)
@@ -223,3 +234,7 @@ option(RANA_TRACY "build with Tracy profiler support" OFF)
 if(RANA_TRACY)
     target_compile_options(rana PRIVATE -DTRACY_ENABLE)
 endif()
+
+# use common libs/flags.
+target_link_libraries(rana PRIVATE rana_common)
+target_link_libraries(rana_test PRIVATE rana_common)

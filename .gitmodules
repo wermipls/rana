@@ -25,3 +25,6 @@
 [submodule "libjxl"]
 	path = libjxl
 	url = https://github.com/libjxl/libjxl
+[submodule "doctest"]
+	path = doctest
+	url = https://github.com/doctest/doctest

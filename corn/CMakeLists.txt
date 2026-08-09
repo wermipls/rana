@@ -15,6 +15,10 @@ if (NOT TARGET opus)
     add_subdirectory(../opus opus)
 endif()
 
+if (NOT TARGET doctest)
+    add_subdirectory(../doctest doctest)
+endif()
+
 # Your application target.
 add_executable(corn
     corn.cpp
@@ -40,3 +44,5 @@ else()
 endif()
 
 target_link_libraries(corn opus)
+target_link_libraries(corn doctest)
+target_compile_definitions(corn PUBLIC DOCTEST_CONFIG_DISABLE)
