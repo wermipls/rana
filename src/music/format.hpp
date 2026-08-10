@@ -240,6 +240,9 @@ struct Song {
 
     void serialize(Serializer &s)
     {
+        s.require_id_string("🐸🎵");
+        s.require_version(0);
+
         s.float32(bpm);
         s.int8(beat_lines);
         s.int8(line_ticks);

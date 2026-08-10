@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <string>
+#include <string_view>
+#include <cassert>
 #include <stdint.h>
 #include <doctest.h>
 #include "log.hpp"
@@ -22,10 +24,10 @@ protected:
 
     Serializer(bool reading) : reading(reading) {}
 
-    virtual void write_impl(void *data, size_t bytes) = 0; // do not call directly - use write().
+    virtual void write_impl(const void *data, size_t bytes) = 0; // do not call directly - use write().
     virtual void read_impl(void *data, size_t bytes) = 0;  // do not call directly - use read().
 
-    void write(void *data, size_t bytes) {
+    void write(const void *data, size_t bytes) {
         if (reading) [[unlikely]] {
             error = "not writable";
             return;
@@ -152,6 +154,32 @@ public:
     void float32(float &data)  { read_or_write_le32(&data); }
     void float64(double &data) { read_or_write_le64(&data); }
 
+    void require_id_string(const std::string_view expected_id) {
+        if (reading) {
+            char actual_id[64]; // let's assume the user is not silly with the length.
+            assert(expected_id.size() < sizeof(actual_id));
+
+            read(actual_id, expected_id.size());
+            if (memcmp(expected_id.data(), actual_id, expected_id.size()) != 0) {
+                error = "format id mismatch";
+            }
+        } else {
+            write(expected_id.data(), expected_id.size());
+        }
+    }
+
+    void require_version(uint16_t expected_ver) {
+        if (reading) {
+            uint16_t actual_ver;
+            int16(actual_ver);
+            if (expected_ver != actual_ver) {
+                error = "format version mismatch";
+            }
+        } else {
+            int16(expected_ver);
+        }
+    }
+
     void bytes(std::vector<uint8_t> &data) {
         if (reading) {
             uint32_t size;
@@ -258,7 +286,7 @@ protected:
         }
     }
 
-    virtual void write_impl(void *data, size_t bytes) {
+    virtual void write_impl(const void *data, size_t bytes) {
         buffer.resize(position + bytes);
         memcpy(buffer.data() + position, data, bytes);
         position += bytes;
@@ -457,6 +485,66 @@ TEST_CASE("Serializer - fails gracefully on size limits") {
         CHECK(std::string(ser.error_msg()) != "");
         CHECK_EQ(buf.size(), 0);
     }
+}
+
+TEST_CASE("Serializer - writes and checks format identifier/version") {
+    SUBCASE("require_version()") {
+        std::vector<uint8_t> buf;
+        {
+            auto ser = SerializerVector::into(buf);
+            ser.require_version(5);
+    
+            REQUIRE(buf.size() == 2);
+            CHECK(ser.ok());
+            CHECK(std::string(ser.error_msg()) == "");
+            CHECK_EQ(buf[0], 5);
+            CHECK_EQ(buf[1], 0);
+        }
+
+        {
+            auto deser_valid = SerializerVector::from(buf);
+            deser_valid.require_version(5);
+            CHECK(deser_valid.ok());
+            CHECK(std::string(deser_valid.error_msg()) == "");
+        }
+
+        {
+            auto deser_invalid = SerializerVector::from(buf);
+            deser_invalid.require_version(6);
+            CHECK(!deser_invalid.ok());
+            CHECK(std::string(deser_invalid.error_msg()) != "");
+        }
+    }
+
+    SUBCASE("require_id_string()") {
+        std::vector<uint8_t> buf;
+        {
+            auto ser = SerializerVector::into(buf);
+            ser.require_id_string("pie");
+
+            REQUIRE(buf.size() == 3);
+            CHECK(ser.ok());
+            CHECK(std::string(ser.error_msg()) == "");
+            CHECK_EQ(buf[0], 'p');
+            CHECK_EQ(buf[1], 'i');
+            CHECK_EQ(buf[2], 'e');
+        }
+
+        {
+            auto deser_valid = SerializerVector::from(buf);
+            deser_valid.require_id_string("pie");
+            CHECK(deser_valid.ok());
+            CHECK(std::string(deser_valid.error_msg()) == "");
+        }
+
+        {
+            auto deser_invalid = SerializerVector::from(buf);
+            deser_invalid.require_id_string("cake");
+            CHECK(!deser_invalid.ok());
+            CHECK(std::string(deser_invalid.error_msg()) != "");
+        }
+    }
+
 }
 
 }
