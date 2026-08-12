@@ -28,6 +28,7 @@ class VstEffect : public AudioEffectX
         setNumOutputs(2);        // stereo out
         setUniqueID(crc32::crc32::calculate(effect_name.c_str(), effect_name.length())); // identify
         canProcessReplacing();   // supports replacing output
+        canDoubleReplacing();
 
         vst_strncpy(programName, "Default", kVstMaxProgNameLen);
 
@@ -51,6 +52,25 @@ class VstEffect : public AudioEffectX
 
     // Processing
     virtual void processReplacing(float **in, float **out, VstInt32 frames)
+    {
+        // fixme: it would be best to not have an allocation here and instead
+        // work on a fixed size buffer in chunks, but in practice it doesn't seem to matter.
+        std::vector<rana::audio::SampleStereo> buf(frames);
+
+        for (int i = 0; i < frames; i++) {
+            buf[i].l = in[0][i];
+            buf[i].r = in[1][i];
+        }
+
+        fx.process(buf.data(), buf.size());
+
+        for (int i = 0; i < frames; i++) {
+            out[0][i] = buf[i].l;
+            out[1][i] = buf[i].r;
+        }
+    }
+
+    virtual void processDoubleReplacing(double **in, double **out, VstInt32 frames)
     {
         // fixme: it would be best to not have an allocation here and instead
         // work on a fixed size buffer in chunks, but in practice it doesn't seem to matter.
