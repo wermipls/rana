@@ -53,39 +53,63 @@ class VstEffect : public AudioEffectX
     // Processing
     virtual void processReplacing(float **in, float **out, VstInt32 frames)
     {
-        // fixme: it would be best to not have an allocation here and instead
-        // work on a fixed size buffer in chunks, but in practice it doesn't seem to matter.
-        std::vector<rana::audio::SampleStereo> buf(frames);
+        const size_t chunk_max = 1024;
+        rana::audio::SampleStereo buf[chunk_max];
 
-        for (int i = 0; i < frames; i++) {
-            buf[i].l = in[0][i];
-            buf[i].r = in[1][i];
-        }
+        auto in0 = in[0];
+        auto in1 = in[1];
+        auto out0 = out[0];
+        auto out1 = out[1];
 
-        fx.process(buf.data(), buf.size());
+        while (frames > 0) {
+            auto chunk_frames = std::min<size_t>(frames, chunk_max);
+            frames -= chunk_frames;
+            for (size_t i = 0; i < chunk_frames; i++) {
+                buf[i].l = in0[i];
+                buf[i].r = in1[i];
+            }
+            fx.process(buf, chunk_frames);
 
-        for (int i = 0; i < frames; i++) {
-            out[0][i] = buf[i].l;
-            out[1][i] = buf[i].r;
+            for (size_t i = 0; i < chunk_frames; i++) {
+                out0[i] = buf[i].l;
+                out1[i] = buf[i].r;
+            }
+
+            in0 += chunk_frames;
+            in1 += chunk_frames;
+            out0 += chunk_frames;
+            out1 += chunk_frames;
         }
     }
 
     virtual void processDoubleReplacing(double **in, double **out, VstInt32 frames)
     {
-        // fixme: it would be best to not have an allocation here and instead
-        // work on a fixed size buffer in chunks, but in practice it doesn't seem to matter.
-        std::vector<rana::audio::SampleStereo> buf(frames);
+        const size_t chunk_max = 1024;
+        rana::audio::SampleStereo buf[chunk_max];
 
-        for (int i = 0; i < frames; i++) {
-            buf[i].l = in[0][i];
-            buf[i].r = in[1][i];
-        }
+        auto in0 = in[0];
+        auto in1 = in[1];
+        auto out0 = out[0];
+        auto out1 = out[1];
 
-        fx.process(buf.data(), buf.size());
+        while (frames > 0) {
+            auto chunk_frames = std::min<size_t>(frames, chunk_max);
+            frames -= chunk_frames;
+            for (size_t i = 0; i < chunk_frames; i++) {
+                buf[i].l = in0[i];
+                buf[i].r = in1[i];
+            }
+            fx.process(buf, chunk_frames);
 
-        for (int i = 0; i < frames; i++) {
-            out[0][i] = buf[i].l;
-            out[1][i] = buf[i].r;
+            for (size_t i = 0; i < chunk_frames; i++) {
+                out0[i] = buf[i].l;
+                out1[i] = buf[i].r;
+            }
+
+            in0 += chunk_frames;
+            in1 += chunk_frames;
+            out0 += chunk_frames;
+            out1 += chunk_frames;
         }
     }
 
