@@ -113,6 +113,22 @@ class VstEffect : public AudioEffectX
         }
     }
 
+    virtual void setSampleRate(float sr) {
+        constexpr bool has_sample_rate_ctor = requires (RanaEffect &fx) {
+            fx = RanaEffect(1.0f);
+        };
+
+        // API doesn't have a method for rate change, so just recreate the fx.
+        if constexpr (has_sample_rate_ctor) {
+            auto param_count = fx.getParamCount();
+            auto fxnew = RanaEffect(sr);
+            for (int i = 0; i < param_count; i++) {
+                fxnew.setParam(i, fx.getParam(i));
+            }
+            fx = std::move(fxnew);
+        }
+    }
+
     // Program
     virtual void setProgramName(char *name) {
         vst_strncpy(programName, name, kVstMaxProgNameLen);
