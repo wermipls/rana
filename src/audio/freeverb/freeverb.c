@@ -1,5 +1,7 @@
 #include "freeverb.h"
 #include <math.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifndef M_PI
   #define M_PI 3.14159265358979323846
@@ -14,7 +16,7 @@ static inline double xabs(double n) {
 
 
 static inline void zeroset(void *buf, int n) {
-  while (n--) { ((char*) buf)[n] = 0; }
+  memset(buf, 0, n);
 }
 
 
@@ -70,7 +72,7 @@ static inline void comb_set_damp(fv_Comb *cmb, double n) {
 }
 
 
-void fv_init(fv_Context *ctx) {
+void fv_init(fv_Context *ctx, double sr) {
   zeroset(ctx, sizeof(*ctx));
 
   for (int i = 0; i < FV_NUMALLPASSES; i++) {
@@ -78,7 +80,7 @@ void fv_init(fv_Context *ctx) {
     ctx->allpassr[i].feedback = 0.5;
   }
 
-  fv_set_samplerate(ctx, FV_INITIALSR);
+  fv_set_samplerate(ctx, sr);
   fv_set_wet(ctx, FV_INITIALWET);
   fv_set_roomsize(ctx, FV_INITIALROOM);
   fv_set_dry(ctx, FV_INITIALDRY);
@@ -88,15 +90,27 @@ void fv_init(fv_Context *ctx) {
   fv_set_lowpass(ctx, FV_INITIALLOWPASS);
 }
 
+void fv_deinit(fv_Context *ctx) {
+  for (int i = 0; i < FV_NUMCOMBS; i++) {
+    free(ctx->combl[i].buf); ctx->combl[i].buf = NULL;
+    free(ctx->combr[i].buf); ctx->combr[i].buf = NULL;
+  }
+
+  for (int i = 0; i < FV_NUMALLPASSES; i++) {
+    free(ctx->allpassl[i].buf); ctx->allpassl[i].buf = NULL;
+    free(ctx->allpassr[i].buf); ctx->allpassr[i].buf = NULL;
+  }
+}
+
 
 void fv_mute(fv_Context *ctx) {
   for (int i = 0; i < FV_NUMCOMBS; i++) {
-    zeroset(ctx->combl[i].buf, sizeof(ctx->combl[i].buf));
-    zeroset(ctx->combr[i].buf, sizeof(ctx->combr[i].buf));
+    zeroset(ctx->combl[i].buf, ctx->combl[i].bufsize * sizeof(double));
+    zeroset(ctx->combr[i].buf, ctx->combr[i].bufsize * sizeof(double));
   }
   for (int i = 0; i < FV_NUMALLPASSES; i++) {
-    zeroset(ctx->allpassl[i].buf, sizeof(ctx->allpassl[i].buf));
-    zeroset(ctx->allpassr[i].buf, sizeof(ctx->allpassr[i].buf));
+    zeroset(ctx->allpassl[i].buf, ctx->allpassl[i].bufsize * sizeof(double));
+    zeroset(ctx->allpassr[i].buf, ctx->allpassr[i].bufsize * sizeof(double));
   }
 }
 
@@ -140,12 +154,20 @@ void fv_set_samplerate(fv_Context *ctx, double value) {
   for (int i = 0; i < FV_NUMCOMBS; i++) {
     ctx->combl[i].bufsize = combs[i] * multiplier;
     ctx->combr[i].bufsize = (combs[i] + FV_STEREOSPREAD) * multiplier;
+    free(ctx->combl[i].buf);
+    free(ctx->combr[i].buf);
+    ctx->combl[i].buf = calloc(ctx->combl[i].bufsize, sizeof(double));
+    ctx->combr[i].buf = calloc(ctx->combr[i].bufsize, sizeof(double));
   }
 
   /* init allpass buffers */
   for (int i = 0; i < FV_NUMALLPASSES; i++) {
     ctx->allpassl[i].bufsize = allpasses[i] * multiplier;
     ctx->allpassr[i].bufsize = (allpasses[i] + FV_STEREOSPREAD) * multiplier;
+    free(ctx->allpassl[i].buf);
+    free(ctx->allpassr[i].buf);
+    ctx->allpassl[i].buf = calloc(ctx->allpassl[i].bufsize, sizeof(double));
+    ctx->allpassr[i].buf = calloc(ctx->allpassr[i].bufsize, sizeof(double));
   }
 
   update(ctx);

@@ -144,8 +144,12 @@ class Reverb : public Effect {
 public:
     Reverb(float sample_rate = 44100)
     {
-        fv_init(&ctx);
-        fv_set_samplerate(&ctx, sample_rate);
+        fv_init(&ctx, sample_rate);
+    }
+
+    ~Reverb()
+    {
+        fv_deinit(&ctx);
     }
 
     virtual void setParam(int index, float value)

@@ -40,14 +40,14 @@ typedef struct {
   double feedback;
   double filterstore;
   double damp1, damp2;
-  double buf[4096];
+  double *buf;
   int bufsize;
   int bufidx;
 } fv_Comb;
 
 typedef struct {
   double feedback;
-  double buf[2048];
+  double *buf;
   int bufsize;
   int bufidx;
 } fv_Allpass;
@@ -71,7 +71,8 @@ typedef struct {
 } fv_Context;
 
 
-void fv_init(fv_Context *ctx);
+void fv_init(fv_Context *ctx, double sr);
+void fv_deinit(fv_Context *ctx);
 void fv_mute(fv_Context *ctx);
 void fv_process(fv_Context *ctx, double *buf, int n);
 void fv_set_samplerate(fv_Context *ctx, double value);
