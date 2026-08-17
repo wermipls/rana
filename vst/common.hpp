@@ -121,11 +121,17 @@ class VstEffect : public AudioEffectX
         // API doesn't have a method for rate change, so just recreate the fx.
         if constexpr (has_sample_rate_ctor) {
             auto param_count = fx.getParamCount();
-            auto fxnew = RanaEffect(sr);
+            std::vector<float> params(param_count);
             for (int i = 0; i < param_count; i++) {
-                fxnew.setParam(i, fx.getParam(i));
+                params[i] = fx.getParam(i);
             }
-            fx = std::move(fxnew);
+            // horrifically ugly, but required to not blow out the stack.
+            fx.~RanaEffect();
+            new(&fx) RanaEffect(sr);
+
+            for (int i = 0; i < param_count; i++) {
+                fx.setParam(i, params[i]);
+            }
         }
     }
 
