@@ -14,12 +14,9 @@ CFLAGS = -shared -static-libgcc -static -O3 \
 
 all: $(BIN)
 
-freeverb.o: ../src/audio/freeverb/freeverb.c
-	$(CC) $^ -Ofast -c -o freeverb.o
-
-bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp ../src/audio/common.hpp Makefile freeverb.o
+bin/rana%.dll: %.cpp $(HEADERS) ../src/audio/effects.hpp ../src/audio/common.hpp Makefile
 	mkdir -p bin
-	$(CXX) $< $(SRC_AUX) freeverb.o -std=c++20 -I../src -I../tracy/public -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x -I../doctest/doctest -DDOCTEST_CONFIG_DISABLE $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
+	$(CXX) $< $(SRC_AUX) -std=c++20 -I../src -I../tracy/public -Ivstsdk2.4 -Ivstsdk2.4/public.sdk/source/vst2.x -I../doctest/doctest -DDOCTEST_CONFIG_DISABLE $(SDK) $(CFLAGS) -DPLUGIN_NAME=\""$(PLUGIN_PREFIX)$*"\" -o $@
 
 clean:
-	$(RM) $(BIN) freeverb.o
+	$(RM) $(BIN)
