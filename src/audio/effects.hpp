@@ -19,7 +19,7 @@ class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
     virtual void setParam(int index, float value) = 0;
-    virtual float getParam(int index) { (void)index; return NAN; }
+    virtual float getParam(int index) { (void)index; return 0; }
     virtual int getParamCount() { return 0; }
     virtual const char *getParamName(int index) { (void)index; return "n/a"; }
     virtual const char *getName() { return "Effect"; }
