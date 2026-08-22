@@ -163,11 +163,11 @@ class VstEffect : public AudioEffectX
         if (index >= fx.getParamCount()) return;
 
         constexpr bool has_getParamLabel = requires(RanaEffect &fx) {
-            fx.getParamLabel(int(0), (char *)(nullptr));
+            { fx.getParamLabel(int(0)) } -> std::same_as<const char *>;
         };
 
         if constexpr (has_getParamLabel) {
-            fx.getParamLabel(index, label);
+            vst_strncpy(label, fx.getParamLabel(index), param_str_len);
         } else {
             label[0] = 0;
         }
@@ -177,11 +177,11 @@ class VstEffect : public AudioEffectX
         if (index >= fx.getParamCount()) return;
 
         constexpr bool has_getParamFmt = requires(RanaEffect &fx) {
-            fx.getParamFmt(int(0), (char *)(nullptr));
+            fx.getParamFmt(int(0), (char *)(nullptr), size_t(0));
         };
 
         if constexpr (has_getParamFmt) {
-            fx.getParamFmt(index, text);
+            fx.getParamFmt(index, text, param_str_len + 1);
         } else {
             snprintf(text, param_str_len + 1, "%f", fx.getParam(index));
         }

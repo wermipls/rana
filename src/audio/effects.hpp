@@ -15,19 +15,33 @@ namespace audio {
 
 using std::min, std::max, std::pow, std::fmod, std::abs, std::floor;
 
+// Effect interface.
+// Roughly similar to VST API, but much simplifed.
+//
+// Some notes:
+// - The only methods that need to be implemented are `process()` and `getName()`.
+// - If a constructor has arguments, the first one should be the sample rate
+//   and the rest (if any) optional, as the VST wrapper machinery depends on it.
+// - The user will call `setParam()` for each parameter before calling `process()`.
+//   Despite that, `getParam()` must return sane default values even before that.
+// - No thread safety is assumed. Any method calls will happen synchronously,
+//   though not necessarily on the same thread.
 class Effect {
 public:
     virtual void process(SampleStereo *in, size_t n) = 0;
-    virtual void setParam(int index, float value) = 0;
+    virtual const char *getName() = 0;
+
+    virtual void setParam(int index, float value) { (void)index; (void)value; }
     virtual float getParam(int index) { (void)index; return 0; }
     virtual int getParamCount() { return 0; }
     virtual const char *getParamName(int index) { (void)index; return "n/a"; }
-    virtual const char *getName() { return "Effect"; }
-    virtual void setBPM(float bpm, bool retrigger = true) { (void)bpm; (void)retrigger; }
-    virtual ~Effect() = default;
 
+    // Not used by anything at the moment.
+    virtual void setBPM(float bpm, bool retrigger = true) { (void)bpm; (void)retrigger; }
     virtual bool isSerializable() { return false; }
-    void serialize(Serializer &s) { (void)s; }
+    virtual void serialize(Serializer &s) { (void)s; }
+
+    virtual ~Effect() = default;
 };
 
 class Filter1Pole : public Effect {
@@ -67,15 +81,15 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str) {
+    void getParamFmt(int index, char *str, size_t sz) {
         auto hz = std::acos(1 - coeff.l*coeff.l / (2-2*coeff.l)) * sr / (2 * pi);
         if (std::isnormal(hz)) {
-            snprintf(str, 8, "%f", hz);
+            snprintf(str, sz, "%f", hz);
         } else {
-            snprintf(str, 8, "> %f", sr/2);
+            snprintf(str, sz, "> %f", sr/2);
         }
     }
-    static inline void getParamLabel(int index, char *str) { strncpy(str, "Hz", 8); }
+    static const char *getParamLabel(int index) { return "Hz"; }
 #endif
 
     virtual void setParam(int index, float value)
@@ -449,17 +463,21 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str) {
+    void getParamFmt(int index, char *str, size_t sz) {
         switch (index) {
-            default: snprintf(str, 8, "%f", params[index]); break;
-            case 3: snprintf(str, 8, "%f", params[3] * max_delay_seconds * 1000.0); break;
+            default: snprintf(str, sz, "%f", params[index]); break;
+            case 3: snprintf(str, sz, "%f", params[3] * max_delay_seconds * 1000.0); break;
         }
     }
-    static inline void getParamLabel(int index, char *str) {
-        switch (index) {
-            default: str[0] = 0; break;
-            case 3: strncpy(str, "ms", 8); break;
-        }
+    static const char *getParamLabel(int index) {
+        static const char *labels[] = {
+            "",
+            "",
+            "",
+            "ms",
+        };
+        static_assert(_countof(labels) == paramCount);
+        return labels[index % paramCount];
     }
 #endif
 
@@ -544,7 +562,7 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str) {
+    void getParamFmt(int index, char *str, size_t sz) {
         const char *mode_str[] = {
             "Hardclip",
             "Softclip",
@@ -555,16 +573,12 @@ public:
             "BadFold"
         };
         switch (index) {
-            default: snprintf(str, 8, "%f", params[index]); break;
-            case 0: snprintf(str, 8, "%f", gain.l); break;
-            case 2: snprintf(str, 8, "%s", mode_str[mode]); break;
+            default: snprintf(str, sz, "%f", params[index]); break;
+            case 0: snprintf(str, sz, "%f", gain.l); break;
+            case 2: snprintf(str, sz, "%s", mode_str[mode]); break;
         }
     }
-    static inline void getParamLabel(int index, char *str) {
-        switch (index) {
-            default: str[0] = 0; break;
-        }
-    }
+    static const char *getParamLabel(int index) { return ""; }
 #endif
 
     virtual void process(SampleStereo *in, size_t n)
@@ -706,19 +720,21 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str) {
+    void getParamFmt(int index, char *str, size_t sz) {
         switch (index) {
-            case 0: snprintf(str, 8, "%d", bits); break;
-            case 1: snprintf(str, 8, "%f", rate); break;
-            case 2: snprintf(str, 8, "%f", smoothing); break;
+            case 0: snprintf(str, sz, "%d", bits); break;
+            case 1: snprintf(str, sz, "%f", rate); break;
+            case 2: snprintf(str, sz, "%f", smoothing); break;
         }
     }
-    static inline void getParamLabel(int index, char *str) {
-        switch (index) {
-            case 0: strncpy(str, "bits", 8); break;
-            case 1: strncpy(str, "Hz", 8); break;
-            default: str[0] = 0; break;
-        }
+    static const char *getParamLabel(int index) {
+        static const char *labels[] = {
+            "bits",
+            "Hz",
+            "",
+        };
+        static_assert(_countof(labels) == paramCount);
+        return labels[index % paramCount];
     }
 #endif
 
@@ -1004,30 +1020,32 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str)
+    void getParamFmt(int index, char *str, size_t sz)
     {
         switch (index) {
-            case 0: snprintf(str, 8, "%f", threshold_db); break;
-            case 1: snprintf(str, 8, "%f", attack_time * 1000.0); break;
-            case 2: snprintf(str, 8, "%f", release_time * 1000.0); break;
-            case 3: snprintf(str, 8, "%f", ratio); break;
-            case 4: snprintf(str, 8, "%f", params[4]); break;
-            case 5: snprintf(str, 8, "%f", makeup_db); break;
-            case 6: snprintf(str, 8, "%f", lookahead_time * 1000.0); break;
+            case 0: snprintf(str, sz, "%f", threshold_db); break;
+            case 1: snprintf(str, sz, "%f", attack_time * 1000.0); break;
+            case 2: snprintf(str, sz, "%f", release_time * 1000.0); break;
+            case 3: snprintf(str, sz, "%f", ratio); break;
+            case 4: snprintf(str, sz, "%f", params[4]); break;
+            case 5: snprintf(str, sz, "%f", makeup_db); break;
+            case 6: snprintf(str, sz, "%f", lookahead_time * 1000.0); break;
         }
     }
 
-    static inline void getParamLabel(int index, char *str)
+    static const char *getParamLabel(int index)
     {
-        switch (index) {
-            case 0: strncpy(str, "dB", 8); break;
-            case 1: strncpy(str, "ms", 8); break;
-            case 2: strncpy(str, "ms", 8); break;
-            case 3: strncpy(str, "", 8); break;
-            case 4: strncpy(str, "", 8); break;
-            case 5: strncpy(str, "dB", 8); break;
-            case 6: strncpy(str, "ms", 8); break;
-        }
+        static const char *labels[] = {
+            "dB",
+            "ms",
+            "ms",
+            "",
+            "",
+            "dB",
+            "ms",
+        };
+        static_assert(_countof(labels) == paramCount);
+        return labels[index % paramCount];
     }
 #endif
 
@@ -1217,7 +1235,7 @@ public:
     virtual int getParamCount() { return paramCount; }
 
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
-    inline void getParamFmt(int index, char *str)
+    void getParamFmt(int index, char *str, size_t sz)
     {
         switch (index) {
             case 0: {
@@ -1232,23 +1250,25 @@ public:
                     "LowShelf",
                     "HighShelf",
                 };
-                snprintf(str, 8, modestr[mode]);
+                snprintf(str, sz, modestr[mode]);
                 break;
             }
-            case 1: snprintf(str, 8, "%f", cutoff.target); break;
-            case 2: snprintf(str, 8, "%f", q.target); break;
-            case 3: snprintf(str, 8, "%f", gain_db.target); break;
+            case 1: snprintf(str, sz, "%f", cutoff.target); break;
+            case 2: snprintf(str, sz, "%f", q.target); break;
+            case 3: snprintf(str, sz, "%f", gain_db.target); break;
         }
     }
 
-    static inline void getParamLabel(int index, char *str)
+    static const char *getParamLabel(int index)
     {
-        switch (index) {
-            case 0: strncpy(str, "", 8); break;
-            case 1: strncpy(str, "Hz", 8); break;
-            case 2: strncpy(str, "Q", 8); break;
-            case 3: strncpy(str, "dB", 8); break;
-        }
+        const char *labels[] = {
+            "",
+            "Hz",
+            "Q",
+            "dB",
+        };
+        static_assert(_countof(labels) == paramCount);
+        return labels[index % paramCount];
     }
 #endif
 
