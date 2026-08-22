@@ -137,25 +137,6 @@ static inline SampleStereo floor(const SampleStereo a)
     return { std::floor(a.l), std::floor(a.r) };
 }
 
-static inline double normalize_frequency(Hz freq, Hz sr)
-{
-    return freq * 2. * pi / sr; 
-}
-
-static inline double derive_1pole_factor(double freq)
-{
-    // assumes normalized angular frequency
-    // https://dsp.stackexchange.com/a/54088
-
-    double y = 1. - cos(freq);
-    return -y + sqrt(y*y + 2*y);
-}
-
-static inline double factor_1pole(Hz freq, Hz sr)
-{
-    return derive_1pole_factor(normalize_frequency(freq, sr));
-}
-
 static inline SampleStereo pan_equal_power(float pan)
 {
     pan += 1.f;
@@ -166,34 +147,6 @@ static inline SampleStereo pan_equal_power(float pan)
         std::cos(pan)
     };
 }
-
-struct Rampable {
-    float current;
-    float target;
-    float coef;
-
-    Rampable(float initial_value, Hz sr, Hz ramping_frequency = 100) {
-        target = current = initial_value;
-        setCoefficient(sr, ramping_frequency);
-    }
-
-    inline void setCoefficient(Hz sr, Hz freq) {
-        coef = derive_1pole_factor(normalize_frequency(freq, sr));
-    }
-    inline void set(float x) { target = x; }
-    inline void setInstant(float x) { target = current = x; }
-    inline float step() {
-        // do calculation on doubles so we can settle much closer to the target value
-        return current = current + ((double)target - current) * coef;
-    }
-    inline bool hasSettled() {
-        auto n = current + ((double)target - current) * coef;
-        return (float)n == current; 
-    }
-
-    inline float operator()() { return step(); }
-    inline float operator=(float rhs) { return target = rhs; }
-};
 
 // approximates sin(x*pi/2) over [-1, 1]
 template <typename T>
@@ -252,6 +205,43 @@ static inline T fast_tanh(T x)
          a *= x;
     return clamp(a / b, -1.0, 1.0);
 }
+
+// cutoff should be in range [0, sr].
+static inline double factor_lowpass_single_pole(Hz cutoff, Hz sr)
+{
+    // https://dsp.stackexchange.com/a/54088
+    auto freq = cutoff / sr;
+    auto y = 1.0 + fast_sin_halfpi(4.0 * freq - 1.0);
+    return sqrt(y*y + 2.0*y) - y;
+}
+
+struct Rampable {
+    float current;
+    float target;
+    float coef;
+
+    Rampable(float initial_value, Hz sr, Hz ramping_frequency = 100) {
+        target = current = initial_value;
+        setCoefficient(sr, ramping_frequency);
+    }
+
+    inline void setCoefficient(Hz sr, Hz freq) {
+        coef = factor_lowpass_single_pole(freq, sr);
+    }
+    inline void set(float x) { target = x; }
+    inline void setInstant(float x) { target = current = x; }
+    inline float step() {
+        // do calculation on doubles so we can settle much closer to the target value
+        return current = current + ((double)target - current) * coef;
+    }
+    inline bool hasSettled() {
+        auto n = current + ((double)target - current) * coef;
+        return (float)n == current; 
+    }
+
+    inline float operator()() { return step(); }
+    inline float operator=(float rhs) { return target = rhs; }
+};
 
 }
 }

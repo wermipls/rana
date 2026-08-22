@@ -44,7 +44,7 @@ public:
     virtual ~Effect() = default;
 };
 
-class Filter1Pole : public Effect {
+class SinglePole : public Effect {
 protected:
     static constexpr auto paramCount = 1;
     const char *paramNames[paramCount] = {
@@ -61,18 +61,18 @@ protected:
         // we want the filter value to reach 1 on the extreme edge
         // so you can set it so it doesn't affect the sound when doing LP,
         // rather than be truly accurate to -3dB frequency
-        float coeff = factor_1pole(pow(value, 2) * 19980 + 20, sr);
+        float coeff = factor_lowpass_single_pole(pow(value, 2) * 19980 + 20, sr);
         return min(coeff + pow(value, 30.0f), 1.0f);
     }
 
-    Filter1Pole(Hz sample_rate = 44100)
+    SinglePole(Hz sample_rate = 44100)
     {
         sr = sample_rate;
         setCutoff(3000);
     }
     void setCutoff(Hz freq)
     {
-        coeff = factor_1pole(freq, sr);
+        coeff = factor_lowpass_single_pole(freq, sr);
     }
 
 public:
@@ -103,9 +103,9 @@ public:
     }
 };
 
-class Lowpass : public Filter1Pole {
+class Lowpass : public SinglePole {
 public:
-    Lowpass(Hz sample_rate = 44100) : Filter1Pole(sample_rate) {}
+    Lowpass(Hz sample_rate = 44100) : SinglePole(sample_rate) {}
     virtual const char *getName() { return "Lowpass"; }
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -117,9 +117,9 @@ public:
     }
 };
 
-class Highpass : public Filter1Pole {
+class Highpass : public SinglePole {
 public:
-    Highpass(Hz sample_rate = 44100) : Filter1Pole(sample_rate) {}
+    Highpass(Hz sample_rate = 44100) : SinglePole(sample_rate) {}
     virtual const char *getName() { return "Highpass"; }
     virtual void process(SampleStereo *in, size_t n)
     {
@@ -250,13 +250,6 @@ class Reverb : public Effect {
     Allpass allpassl[NUMALLPASSES];
     Allpass allpassr[NUMALLPASSES];
 
-    static inline double filter_coeff(double cutoff_hz, double sr)
-    {
-        double freq = cutoff_hz * 2.0 * pi / sr;
-        double y = 1. - cos(freq);
-        return -y + sqrt(y*y + 2.0*y);
-    }
-
     void update()
     {
         wet1 = wet * (width * 0.5 + 0.5);
@@ -279,8 +272,8 @@ class Reverb : public Effect {
             combr[i].set_damp(damp1);
         }
 
-        lp_coeff = filter_coeff(lp_cutoff, sr);
-        hp_coeff = filter_coeff(hp_cutoff, sr);
+        lp_coeff = factor_lowpass_single_pole(lp_cutoff, sr);
+        hp_coeff = factor_lowpass_single_pole(hp_cutoff, sr);
 
         need_update = false;
     }
@@ -831,7 +824,7 @@ class Compressor : public Effect {
 public:
     Compressor(float sample_rate = 44100) : sr{sample_rate}
     {
-        pp_coeff = 1.0f - factor_1pole(PeakSmoothingHz, sr);
+        pp_coeff = 1.0f - factor_lowpass_single_pole(PeakSmoothingHz, sr);
     }
 
     virtual void setParam(int index, float value)
@@ -841,8 +834,8 @@ public:
 
         switch (index) {
             case 0: threshold_db = dB(std::pow(value, 3) * 0.999f + 0.001f); break;
-            case 1: attack_coeff  = factor_1pole(1.0f + std::pow(1.0f - value, 10) * 22049.0f, sr); break;
-            case 2: release_coeff = factor_1pole(0.1f + std::pow(1.0f - value, 10) * 999.9f, sr); break;
+            case 1: attack_coeff  = factor_lowpass_single_pole(1.0f + std::pow(1.0f - value, 10) * 22049.0f, sr); break;
+            case 2: release_coeff = factor_lowpass_single_pole(0.1f + std::pow(1.0f - value, 10) * 999.9f, sr); break;
             case 3: ratio = value; break; 
             case 4: makeup = std::pow(value, 3) * 16.0f + 1.0f; break;
         }
@@ -962,7 +955,7 @@ class Compressor2 : public Effect {
         return std::pow(10, a/20);
     }
 
-    static inline double factor_1pole_target(double target, double iterations)
+    static inline double factor_single_pole_target(double target, double iterations)
     {
         static_assert(std::numeric_limits<double>::is_iec559); // we need div by zero to yield +inf.
         return std::pow(target, 1.0 / (1 + iterations));
@@ -977,7 +970,7 @@ class Compressor2 : public Effect {
 public:
     Compressor2(float sample_rate = 44100) : sr{sample_rate}
     {
-        pp_coeff = 1.0f - factor_1pole(PeakSmoothingHz, sr);
+        pp_coeff = 1.0f - factor_lowpass_single_pole(PeakSmoothingHz, sr);
         pp_lookahead_coeff = 0;
     }
 
@@ -990,12 +983,12 @@ public:
             case 0: threshold_db = value * 60.0 - 60.0; break;
             case 1: {
                 attack_time = std::pow(value, 3) * 10.0;
-                attack_coeff  = 1.0 - factor_1pole_target(from_dB(-30), sr * attack_time);
+                attack_coeff  = 1.0 - factor_single_pole_target(from_dB(-30), sr * attack_time);
                 break;
             }
             case 2: {
                 release_time = std::pow(value, 3) * 10.0;
-                release_coeff = 1.0 - factor_1pole_target(from_dB(-30), sr * release_time);
+                release_coeff = 1.0 - factor_single_pole_target(from_dB(-30), sr * release_time);
                 break;
             }
             case 3: ratio = value * 1.25 - 0.25; break; 
@@ -1008,7 +1001,7 @@ public:
             case 6: {
                 lookahead_time = value * MaxLookaheadSeconds;
                 lookahead_samples = lookahead_time * sr;
-                pp_lookahead_coeff = factor_1pole_target(from_dB(-20.0), lookahead_samples);
+                pp_lookahead_coeff = factor_single_pole_target(from_dB(-20.0), lookahead_samples);
                 break;
             }
         }

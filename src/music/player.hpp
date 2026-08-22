@@ -86,7 +86,7 @@ class MusicSampler {
     {
         volume_actual = 1;
         volume_target = 1;
-        volume_coeff = factor_1pole(RnsVolumeSmoothing, sr);
+        volume_coeff = factor_lowpass_single_pole(RnsVolumeSmoothing, sr);
         note_off = false;
         time_since_trigger = 0;
 
@@ -221,7 +221,7 @@ public:
         if (note_off) return;
 
         volume_target = 0;
-        volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
+        volume_coeff = factor_lowpass_single_pole(RnsDeclickSmoothing, sr);
     }
 
     void setNote(uint8_t note, bool legato = false)
@@ -283,7 +283,7 @@ public:
         }
         volume_actual = 0;
         // FIXME: declick using the same volume as volume commands...
-        volume_coeff = factor_1pole(RnsDeclickSmoothing, sr);
+        volume_coeff = factor_lowpass_single_pole(RnsDeclickSmoothing, sr);
     }
 
     void setReverse()
