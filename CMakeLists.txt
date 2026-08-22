@@ -7,6 +7,12 @@ if(NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     file(GENERATE OUTPUT .gitignore CONTENT "*")
 endif()
 
+get_property(multiconfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT CMAKE_BUILD_TYPE AND NOT multiconfig)
+    message(STATUS "No build type selected, using MinSizeRel.")
+    set(CMAKE_BUILD_TYPE "MinSizeRel")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(BUILD_SHARED_LIBS OFF)
 
