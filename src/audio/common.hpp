@@ -38,7 +38,7 @@ union SampleStereo {
     SampleStereo(const double x) : v(_mm_set1_pd(x)) {}
     SampleStereo(const __m128d &x) : v(x) {}
     SampleStereo(const SampleStereo &x) : v(x.v) {}
-    SampleStereo(const double l, const double r) : v(_mm_set_pd(r, l)) {} // yes, the other way around.
+    SampleStereo(const double l, const double r) : v(_mm_setr_pd(l, r)) {}
 
     SampleStereo &operator=(const SampleStereo &rhs) { v = rhs.v; return *this; }
 
