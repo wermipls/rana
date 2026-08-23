@@ -16,6 +16,8 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(BUILD_SHARED_LIBS OFF)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_library(rana_common INTERFACE)
 
 include(ExternalProject)
