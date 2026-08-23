@@ -1158,8 +1158,14 @@ class Biquad : public Effect {
                 b2 = phi2(omega, damp, a);
                 G = omega*omega / (4.f*pi*pi);
                 break;
+            case Bandpass:
+                a1 = phi_zero + phi_inf;
+                a2 = phi_zero * phi_inf;
+                b1 = phi1(omega, damp, a);
+                b2 = phi2(omega, damp, a);
+                G = omega / (2.f * pi) / (2 + a1);
+                break;
             case FixedBandpass:
-            case Bandpass: // FIXME
                 a1 = phi_zero + phi_inf;
                 a2 = phi_zero * phi_inf;
                 b1 = phi1(omega, damp, a);
@@ -1236,12 +1242,12 @@ public:
                     "Lowpass",
                     "Highpass",
                     "Bandpass",
-                    "FixedBandpass",
+                    "Fixed Bandpass",
                     "Notch",
                     "Allpass",
                     "Peaking",
-                    "LowShelf",
-                    "HighShelf",
+                    "Low Shelf",
+                    "High Shelf",
                 };
                 snprintf(str, sz, modestr[mode]);
                 break;
