@@ -863,7 +863,7 @@ public:
 };
 
 class Compressor2 : public Effect {
-    static constexpr auto paramCount = 7;
+    static constexpr auto paramCount = 8;
     const char *paramNames[paramCount] = {
         "threshold",
         "attack",
@@ -872,6 +872,7 @@ class Compressor2 : public Effect {
         "knee",
         "makeup",
         "lookahead",
+        "auto makeup",
     };
     float params[paramCount] = {
         0.8,
@@ -879,6 +880,7 @@ class Compressor2 : public Effect {
         0.5,
         0.5,
         0.1,
+        0.0,
         0.0,
         0.0,
     };
@@ -904,6 +906,7 @@ class Compressor2 : public Effect {
     double makeup = 1;
     double ratio = 0.5;
     double knee = 0.01;
+    double auto_makeup;
     size_t lookahead_samples = 0;
 
     BitmaskRingBuf<SampleStereo, MaxLookaheadSamples> delay_buf = {};
@@ -1003,6 +1006,7 @@ public:
                 pp_lookahead_coeff = factor_single_pole_target(from_dB(-20.0), lookahead_samples);
                 break;
             }
+            case 7: auto_makeup = value; break;
         }
     }
 
@@ -1022,6 +1026,7 @@ public:
             case 4: snprintf(str, sz, "%f", params[4]); break;
             case 5: snprintf(str, sz, "%f", makeup_db); break;
             case 6: snprintf(str, sz, "%f", lookahead_time * 1000.0); break;
+            case 7: snprintf(str, sz, "%f", auto_makeup); break;
         }
     }
 
@@ -1035,6 +1040,7 @@ public:
             "",
             "dB",
             "ms",
+            "",
         };
         static_assert(_countof(labels) == paramCount);
         return labels[index % paramCount];
@@ -1044,6 +1050,7 @@ public:
     virtual void process(SampleStereo *in, size_t n)
     {
         ZoneScopedN("Compressor2");
+        auto makeup_actual = makeup * from_dB(-threshold_db * auto_makeup);
         for (size_t i = 0; i < n; i++) {
             auto s = in[i];
             delay_buf.push(s);
@@ -1058,7 +1065,7 @@ public:
                 volume_target = 1;
             }
             processVolume();
-            in[i] = delay_buf[MaxLookaheadSamples - lookahead_samples - 1] * volume_actual * makeup;
+            in[i] = delay_buf[MaxLookaheadSamples - lookahead_samples - 1] * volume_actual * makeup_actual;
         }
     }
 };
