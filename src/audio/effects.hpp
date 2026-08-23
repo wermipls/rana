@@ -957,7 +957,7 @@ class Compressor2 : public Effect {
     static inline double factor_single_pole_target(double target, double iterations)
     {
         static_assert(std::numeric_limits<double>::is_iec559); // we need div by zero to yield +inf.
-        return std::pow(target, 1.0 / (1 + iterations));
+        return std::pow(target, 1.0 / iterations);
     }
 
     static inline double smooth_min(double a, double b, double k)
