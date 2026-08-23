@@ -906,8 +906,8 @@ class Compressor2 : public Effect {
     double knee = 0.01;
     size_t lookahead_samples = 0;
 
-    BitmaskRingBuf<SampleStereo, MaxLookaheadSamples> delay_buf;
-    BitmaskRingBuf<double, MaxLookaheadSamples> peak_buf;
+    BitmaskRingBuf<SampleStereo, MaxLookaheadSamples> delay_buf = {};
+    BitmaskRingBuf<double, MaxLookaheadSamples> peak_buf = {};
 
     void peakToPeak(SampleStereo value)
     {
@@ -921,18 +921,18 @@ class Compressor2 : public Effect {
 
     double attack_ramp()
     {
-        // fixme: this can be optimized and *really* should. it's horribly slow.
-        // if we run into a case where:
-        //  1) max() takes value of peak_buf[i],
-        //  2) we have already processed that value,
-        // we know that subsequent samples will be exactly the same as before
-        // and can reuse calculations from previous iterations.
         double peak = peak_buf[MaxLookaheadSamples-1];
-        for (size_t i = MaxLookaheadSamples; i > MaxLookaheadSamples - lookahead_samples; i--) {
+        for (size_t i = MaxLookaheadSamples-1; i > MaxLookaheadSamples - lookahead_samples; i--) {
             peak *= pp_lookahead_coeff;
-            peak = max(peak_buf[i-1], peak);
+            const auto prev_peak = peak_buf[i-1];
+            if (prev_peak > peak) {
+                peak_buf[i-1] = prev_peak;
+                break;
+            }
+            peak_buf[i-1] = peak;
         }
-        return peak;
+        auto pb = peak_buf[MaxLookaheadSamples - lookahead_samples - 1];
+        return pb;
     }
 
     void processVolume()
@@ -1053,6 +1053,10 @@ public:
             auto delta_db = pp_db - threshold_db;
             auto comp_curve = smooth_min(threshold_db + delta_db * ratio, pp_db, knee);
             volume_target = from_dB(comp_curve - pp_db);
+            // may be nan if peak was 0, so just substitute with a sane value.
+            if (std::isnan(volume_target)) {
+                volume_target = 1;
+            }
             processVolume();
             in[i] = delay_buf[MaxLookaheadSamples - lookahead_samples - 1] * volume_actual * makeup;
         }
