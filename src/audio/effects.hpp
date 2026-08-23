@@ -856,9 +856,8 @@ public:
             auto target_db = 0;
             if (delta_db > 0.0f) target_db -= delta_db * ratio;
             volume_target = from_dB(target_db);
-            volume_target *= makeup;
             processVolume();
-            in[i] *= volume_actual;
+            in[i] *= volume_actual * makeup;
         }
     }
 };
