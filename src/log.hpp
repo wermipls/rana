@@ -2,6 +2,12 @@
 
 #include <cstdio>
 #include <utility>
+#ifndef NDEBUG
+    #include <source_location>
+    #if _WIN32
+        #include <debugapi.h>
+    #endif
+#endif
 
 namespace rana {
 namespace log {
@@ -11,6 +17,30 @@ namespace log {
 #ifdef __clang__
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wformat-security"
+#endif
+
+#ifndef NDEBUG
+    template <typename... T>
+    struct debug {
+        debug(
+            const char *fmt,
+            T&&... args,
+            const std::source_location &loc = std::source_location::current())
+        {
+            char msg[1024];
+            auto prefix = snprintf(msg, sizeof(msg), "%s:%d: ", loc.file_name(), loc.line());
+            std::snprintf(msg+prefix, sizeof(msg)-prefix, fmt, std::forward<T>(args)...);
+            OutputDebugStringA(msg);
+            std::fputs("\033[35mdebug: \033[0m", stderr);
+            std::fputs(msg, stderr);
+            std::fputc('\n', stderr);
+        }
+    };
+    template <typename... T>
+    debug(const char *fmt, T&&...args) -> debug<T...>;
+#else
+    // no-op.
+    template <typename... T> void debug(T&&...) {};
 #endif
 
 template <typename... T>
