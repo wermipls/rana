@@ -32,7 +32,7 @@ add_executable(rana WIN32
     src/input.cpp
     src/sdl_error.cpp
     src/audio/samples.cpp
-    src/glad.c
+    external/glad/glad.c
     imgui/imgui.cpp
     imgui/imgui_demo.cpp
     imgui/imgui_draw.cpp
