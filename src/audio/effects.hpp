@@ -418,24 +418,18 @@ class Delay : public Effect {
 public:
     Delay(Hz sample_rate = 44100)
     {
-        buffer_size = sample_rate * max_delay_seconds;
+        buffer_size = std::max<size_t>(sample_rate * max_delay_seconds, 1);
         buffer = std::make_unique<SampleStereo[]>(buffer_size);
-        for (size_t i = 0; i < buffer_size; i++) {
-            buffer[i] = 0;
-        }
 
         setDelay(0.2);
     }
 
     void setDelay(float value)
     {
-        if (value > 1.0) value = 1.0;
-        if (value < 0.0) value = 0.0;
+        assert(value >= 0.0);
+        assert(value <= 1.0);
 
-        delay_size = buffer_size * value;
-        if (delay_size == 0) delay_size = 1;
-        if (delay_size > buffer_size) delay_size = buffer_size;
-
+        delay_size = std::max<size_t>(buffer_size * value, 1);
         buffer_pos = buffer_pos % delay_size;
     }
 
