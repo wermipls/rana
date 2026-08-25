@@ -1,11 +1,11 @@
 #pragma once
 
-#include <doctest.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <algorithm>
 #include <float.h>
 #ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
     #include <cmath>
     #include <numbers>
     #include <bit>
@@ -230,6 +230,7 @@ static inline double exp(double x)
     return (x < 0.0) ? exp_neg : exp_pos;
 }
 
+#ifndef DOCTEST_CONFIG_DISABLE
 
 TEST_CASE("fmath::exp() - basic identities") {
     CHECK(exp(-INFINITY) == 0.0);
@@ -252,5 +253,7 @@ TEST_CASE("fmath::exp() - quick accuracy check") {
         REQUIRE(ulp_f32(fmath::exp(x), std::exp(x)) <= 1);
     }
 }
+
+#endif // ifndef DOCTEST_CONFIG_DISABLE
 
 } // namespace rana::fmath

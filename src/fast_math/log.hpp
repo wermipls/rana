@@ -1,10 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include <doctest.h>
+#include <float.h>
 #ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
     #include <cmath>
     #include <numbers>
+    #include <bit>
     #include "test_ulp.hpp"
 #endif
 
@@ -13,32 +15,20 @@ namespace rana::fmath {
 // approximates log2(x) on [ 1, 2 ].
 static inline double log2_piecewise(double x)
 {
-    // $ ./lolremez --degree 8 -r 1+1e-50:2 --double "log2(x)/(x-1)" "1.00001-(x-1)"
-    // coefficients perturbed by brute force.
-    double k[] = {
-         0.005835235613796637029,
-        -0.08224624716288450599,
-         0.5135471981230849137,
-        -1.867896604322639709,
-         4.377197236796875224,
-        -6.906051655675589984,
-         7.475042031201961201,
-        -5.674808426876198908,
-         3.60207616376361317
-    };
-         double u = k[0];
-        u = u * x + k[1];
-        u = u * x + k[2];
-        u = u * x + k[3];
-        u = u * x + k[4];
-        u = u * x + k[5];
-        u = u * x + k[6];
-        u = u * x + k[7];
-    return (u * x + k[8]) * (x - 1.0);
+    // $ ./lolremez --degree 7 -r 1e-50:1-1e-50 --double "(log2(x+1)-x)/(x-1)/x" "(log2(x+1)-x)/(x-1)/x"
+    x -= 1;
+    double u = 0.005619850777948839;
+    u = u * x + -0.028976585594575062;
+    u = u * x + 0.070447560265661791;
+    u = u * x + -0.114826436013603;
+    u = u * x + 0.15499314191493779;
+    u = u * x + -0.20184957437862558;
+    u = u * x + 0.27863455401427284;
+    return (u * x + -0.44269490501839237) * (x - 1.0) * x + x;
 }
 
 // approximates log2(x) on [ 0, inf ].
-// max error: roughly 3.18ULP when rounded to single precision.
+// max known error: 2.41 ULP at x=0.9999586 when rounded to single precision.
 static inline double log2(double x)
 {
     union fp64 {
@@ -78,6 +68,7 @@ static inline double ln(double x)
     return log2(x) * ln_2;
 }
 
+#ifndef DOCTEST_CONFIG_DISABLE
 
 TEST_CASE("fmath::log2() - basic identities") {
     CHECK(log2(0.0) == -INFINITY);
@@ -107,17 +98,17 @@ TEST_CASE("fmath::log10() - basic identities") {
 
 TEST_CASE("fmath::log2() - quick accuracy check") {
     // it's not realistic to test all cases, so just test some of them.
-    // function claims to be accurate to 3.18 ULP (when rounded to single).
-    // let's assume error is within 4 ULP.
+    // function claims to be accurate to 2.41 ULP (when rounded to single).
+    // make sure error is within 2.5 ULP.
     for (uint32_t i = 0x00000000; i < 0x7f800000; i += 0x1000) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::log2(x), std::log2(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::log2(x), std::log2(x)) <= 2);
     }
 
     // we know that accuracy gets worse around 1, so do extra checking there to be sure.
-    for (uint32_t i = 0x3f800000 - 32; i < 0x3f800000 + 32; i++) {
+    for (uint32_t i = 0x3f800000 - 0x100; i < 0x3f800000 + 0x100; i++) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::log2(x), std::log2(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::log2(x), std::log2(x)) <= 2);
     }
 }
 
@@ -125,12 +116,12 @@ TEST_CASE("fmath::ln() - quick accuracy check") {
     // same as log2() variant.
     for (uint32_t i = 0x00000000; i < 0x7f800000; i += 0x1000) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::ln(x), std::log(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::ln(x), std::log(x)) <= 2);
     }
 
-    for (uint32_t i = 0x3f800000 - 32; i < 0x3f800000 + 32; i++) {
+    for (uint32_t i = 0x3f800000 - 0x100; i < 0x3f800000 + 0x100; i++) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::ln(x), std::log(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::ln(x), std::log(x)) <= 2);
     }
 }
 
@@ -138,14 +129,15 @@ TEST_CASE("fmath::log10() - quick accuracy check") {
     // same as log2() variant.
     for (uint32_t i = 0x00000000; i < 0x7f800000; i += 0x1000) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::log10(x), std::log10(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::log10(x), std::log10(x)) <= 2);
     }
 
-    for (uint32_t i = 0x3f800000 - 32; i < 0x3f800000 + 32; i++) {
+    for (uint32_t i = 0x3f800000 - 0x100; i < 0x3f800000 + 0x100; i++) {
         const double x = std::bit_cast<float>(i);
-        REQUIRE(ulp_f32(fmath::log10(x), std::log10(x)) <= 4);
+        REQUIRE(ulp_f32(fmath::log10(x), std::log10(x)) <= 2);
     }
 }
 
+#endif // ifndef DOCTEST_CONFIG_DISABLE
 
 } // namespace rana::fmath

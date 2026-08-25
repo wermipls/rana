@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cfloat>
 #include <stdint.h>
 #include <cmath>
 #include <format>

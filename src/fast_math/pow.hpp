@@ -2,10 +2,11 @@
 
 #include "exp.hpp"
 #include "log.hpp"
-#include <doctest.h>
 #ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
     #include <cmath>
     #include <numbers>
+    #include <bit>
     #include "test_ulp.hpp"
 #endif
 
@@ -19,6 +20,7 @@ static inline double pow(double x, double y)
     return exp(ln(x) * y);
 }
 
+#ifndef DOCTEST_CONFIG_DISABLE
 
 TEST_CASE("fmath::pow() - basic test") {
     CHECK(fmath::pow(1.0, 1.0) == 1.0);
@@ -46,7 +48,7 @@ TEST_CASE("fmath::pow() - quick accuracy check") {
 
     // it's not realistic to test all cases, so just test some of them.
     // error is not specified but is dependent on ln and exp approximations,
-    // so let's assume up to 16 ULP of error in single precision.
+    // so let's assume up to 16.5 ULP of error in single precision.
     for (uint32_t i = 0x00000000; i < 0x7f800000; i += 0x1000) {
         const double y = std::bit_cast<float>(i);
         REQUIRE(ulp_f32(fmath::pow(x, y), std::pow(x, y)) <= 16);
@@ -57,5 +59,7 @@ TEST_CASE("fmath::pow() - quick accuracy check") {
         REQUIRE(ulp_f32(fmath::pow(x, y), std::pow(x, y)) <= 16);
     }
 }
+
+#endif // ifndef DOCTEST_CONFIG_DISABLE
 
 } // rana::fmath
