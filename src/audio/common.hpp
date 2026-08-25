@@ -34,7 +34,7 @@ union SampleStereo {
 #ifdef RANA_SSE2
     __m128d v;
 
-    SampleStereo() : v() {}
+    SampleStereo() : v(_mm_setzero_pd()) {}
     SampleStereo(const double x) : v(_mm_set1_pd(x)) {}
     SampleStereo(const __m128d &x) : v(x) {}
     SampleStereo(const SampleStereo &x) : v(x.v) {}
