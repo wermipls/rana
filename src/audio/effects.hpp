@@ -9,6 +9,8 @@
 #endif
 #include <memory>
 #include "containers/bitmask_ringbuf.hpp"
+#include "fast_math/pow.hpp"
+#include "fast_math/log.hpp"
 
 namespace rana {
 namespace audio {
@@ -949,12 +951,12 @@ class Compressor2 : public Effect {
 
     static inline double dB(double volume)
     {
-        return 20.0 * std::log10(volume);
+        return 20.0 * fmath::log10(volume);
     }
 
     static inline double from_dB(double a)
     {
-        return std::pow(10, a/20);
+        return fmath::pow(10, a/20);
     }
 
     static inline double factor_single_pole_target(double target, double iterations)
