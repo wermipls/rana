@@ -1,10 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <SDL3/SDL_audio.h>
-#include "common.hpp"
+#include <SDL3/SDL_init.h>
 #include "sdl_error.hpp"
-#include "log.hpp"
 
 namespace rana {
 namespace audio {
