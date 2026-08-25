@@ -1,7 +1,9 @@
 #pragma once
 
 #include <stddef.h>
-#include <doctest.h>
+#ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
+#endif
 
 namespace rana {
 
@@ -31,6 +33,8 @@ public:
     void push(T &&v)      { buf[(offset + sz) & mask] = v; offset++; }
 };
 
+#ifndef DOCTEST_CONFIG_DISABLE
+
 TEST_CASE("BitmaskRingBuf - smoke test") {
     BitmaskRingBuf<int, 5> rb = {};
 
@@ -52,5 +56,7 @@ TEST_CASE("BitmaskRingBuf - smoke test") {
     CHECK(rb[3] == 8);
     CHECK(rb[4] == 42);
 }
+
+#endif // ifndef DOCTEST_CONFIG_DISABLE
 
 } // namespace rana

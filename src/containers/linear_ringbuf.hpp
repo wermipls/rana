@@ -1,7 +1,9 @@
 #pragma once
 
 #include <stddef.h>
-#include <doctest.h>
+#ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
+#endif
 
 namespace rana {
 
@@ -33,6 +35,8 @@ public:
     const T *data() { return &buf[offset]; }
 };
 
+#ifndef DOCTEST_CONFIG_DISABLE
+
 TEST_CASE("LinearRingBuf - smoke test") {
     LinearRingBuf<int, 5> rb = {};
 
@@ -54,5 +58,7 @@ TEST_CASE("LinearRingBuf - smoke test") {
     CHECK(rb[3] == 8);
     CHECK(rb[4] == 42);
 }
+
+#endif // ifndef DOCTEST_CONFIG_DISABLE
 
 } // namespace rana

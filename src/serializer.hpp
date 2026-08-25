@@ -5,8 +5,10 @@
 #include <string_view>
 #include <cassert>
 #include <stdint.h>
-#include <doctest.h>
 #include "log.hpp"
+#ifndef DOCTEST_CONFIG_DISABLE
+    #include <doctest.h>
+#endif
 
 namespace rana {
 
@@ -338,6 +340,8 @@ bool deserialize_from_vector(T &a, const std::vector<uint8_t> &buffer)
     return ok;
 }
 
+#ifndef DOCTEST_CONFIG_DISABLE
+
 TEST_CASE("Serializer - can serialize and deserialize little endian scalars") {
     uint16_t a = 0xcafe;
     uint32_t b = 0xdeadbeef;
@@ -544,7 +548,8 @@ TEST_CASE("Serializer - writes and checks format identifier/version") {
             CHECK(std::string(deser_invalid.error_msg()) != "");
         }
     }
-
 }
 
-}
+#endif // ifndef DOCTEST_CONFIG_DISABLE
+
+} // namespace rana
