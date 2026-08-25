@@ -1130,7 +1130,7 @@ class Biquad : public Effect {
     {
         auto vxy = v(x,y,a);
         auto kxy = k(x,y,a);
-        return (2.f * pi*pi - 2 * vxy) / (pi*pi + vxy + pi * sqrt2 * sqrt(vxy + kxy));
+        return (2. * pi*pi - 2 * vxy) / (pi*pi + vxy + pi * sqrt2 * sqrt(vxy + kxy));
     }
 
     static inline double phi2(double x, double y, double a)
@@ -1140,12 +1140,14 @@ class Biquad : public Effect {
         return (pi*pi + vxy - pi * sqrt2 * sqrt(vxy + kxy)) / (pi*pi + vxy + pi * sqrt2 * sqrt(vxy + kxy));
     }
 
-    static inline void recalculateCoeffs(Coeffs &coeff, float sr, Mode mode, float cutoff, float q, float gain_db)
+    static inline void recalculateCoeffs(Coeffs &coeff, double sr, Mode mode, double cutoff, double q, double gain_db)
     {
+        cutoff = std::min(cutoff, sr / 2.0); // formulas aren't valid above nyquist.
+
         // FIXME: allow adjusting cutoff for channels separately.
         const double omega = sr / cutoff;
         const double damp = 0.5 / q;
-        const double gain = pow(10.0f, gain_db / 20.0);
+        const double gain = pow(10.0, gain_db / 20.0);
         
         const double ctg_pi_omega = tan(pi/2 - (pi/omega));
         const double a = sqrt(omega*omega - pi*pi * ctg_pi_omega*ctg_pi_omega); // (2.11)
@@ -1192,24 +1194,24 @@ class Biquad : public Effect {
                 G = 1.f / (1 + a1 + a2);
                 break;
             case HighShelf:
-                a1 = phi1(omega * powf(gain, 0.25f), damp, a);
-                a2 = phi2(omega * powf(gain, 0.25f), damp, a);
-                b1 = phi1(omega * powf(gain, -0.25f), damp, a);
-                b2 = phi2(omega * powf(gain, -0.25f), damp, a);
+                a1 = phi1(omega * pow(gain, 0.25), damp, a);
+                a2 = phi2(omega * pow(gain, 0.25), damp, a);
+                b1 = phi1(omega * pow(gain, -0.25), damp, a);
+                b2 = phi2(omega * pow(gain, -0.25), damp, a);
                 G = 1.f / (1 + a1 + a2);
                 break;
             case LowShelf:
-                a1 = phi1(omega * powf(gain, -0.25f), damp, a);
-                a2 = phi2(omega * powf(gain, -0.25f), damp, a);
-                b1 = phi1(omega * powf(gain, 0.25f), damp, a);
-                b2 = phi2(omega * powf(gain, 0.25f), damp, a);
+                a1 = phi1(omega * pow(gain, -0.25), damp, a);
+                a2 = phi2(omega * pow(gain, -0.25), damp, a);
+                b1 = phi1(omega * pow(gain, 0.25), damp, a);
+                b2 = phi2(omega * pow(gain, 0.25), damp, a);
                 G = gain / (1 + a1 + a2);
                 break;
             case Peaking:
-                a1 = phi1(omega, damp * powf(gain, 0.5f), a);
-                a2 = phi2(omega, damp * powf(gain, 0.5f), a);
-                b1 = phi1(omega, damp * powf(gain, -0.5f), a);
-                b2 = phi2(omega, damp * powf(gain, -0.5f), a);
+                a1 = phi1(omega, damp * pow(gain, 0.5), a);
+                a2 = phi2(omega, damp * pow(gain, 0.5), a);
+                b1 = phi1(omega, damp * pow(gain, -0.5), a);
+                b2 = phi2(omega, damp * pow(gain, -0.5), a);
                 G = 1.f / (1 + a1 + a2);
                 break;
             case Allpass:
