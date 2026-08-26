@@ -16,7 +16,7 @@
 #include "input.hpp"
 #include "audio/audio.hpp"
 #define SOL_ALL_SAFETIES_ON 1
-#define SOL_EXCEPTIONS_ALWAYS_UNSAFE 1
+#define SOL_PRINT_ERRORS 0
 #include <sol/sol.hpp>
 
 void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
