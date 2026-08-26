@@ -18,6 +18,9 @@ set(BUILD_SHARED_LIBS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# no exceptions for main/library code.
+add_compile_options(-fno-exceptions)
+
 add_library(rana_common INTERFACE)
 
 include(ExternalProject)
@@ -58,6 +61,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "-s")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
+
+# doctest technically can work without exceptions, but in a limited way,
+# so we just turn exceptions back on for the test binary.
+target_compile_options(rana_test PRIVATE -fexceptions)
 
 target_link_libraries(rana_common INTERFACE -static-libgcc -static-libstdc++ -fdiagnostics-color=always)
 target_compile_options(rana_common INTERFACE -ggdb -fdiagnostics-color=always)

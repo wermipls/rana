@@ -58,7 +58,8 @@ static uint32_t generate_texture_from_buffer(uint8_t *buf, uint w, uint h, uint 
         case 3: internal_format = GL_SRGB;       format = GL_RGB; break;
         case 1: internal_format = GL_RED;        format = GL_RED; break;
         default:
-            throw Exception("unsupported texture channel count: " + std::to_string(ch));
+            log::err("unsupported texture channel count: %d", ch);
+            return 0;
     }
 
     if (ch == 4) {

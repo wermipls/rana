@@ -10,6 +10,7 @@
 #include "shader.hpp"
 #include "gfx_textures.hpp"
 #include "font.hpp"
+#include "log.hpp"
 
 namespace rana {
 namespace gfx {
@@ -71,7 +72,8 @@ public:
     {
         if (transform_stack.size() >= 32) {
             transform_stack.resize(0);
-            throw Exception("stack depth exceeds maximum (32). chances are you are doing something terribly wrong");
+            log::warn("stack depth exceeds maximum (32). chances are you are doing something terribly wrong");
+            return;
         }
         transform_stack.push_back(transform);
     }
@@ -79,7 +81,8 @@ public:
     auto popTransform()
     {
         if (transform_stack.size() == 0) {
-            throw Exception("there is nothing left to pop");
+            log::warn("there is nothing left to pop");
+            return;
         }
         transform = transform_stack.back();
         transform_stack.pop_back();

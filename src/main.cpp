@@ -139,7 +139,7 @@ sol::table open_log(sol::this_state s)
     return log;
 }
 
-int rana_main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     if (argc == 0) {
         return -1;
@@ -344,17 +344,4 @@ int rana_main(int argc, char **argv)
     rana::audio::deinit();
 
     return 0;
-}
-
-int main(int argc, char **argv)
-{
-    int result = -1;
-    try {
-        result = rana_main(argc, argv);
-    } catch (std::exception &e) {
-        auto msg = std::string("an exception has occured:\n\n") + e.what();
-        rana::log::err(msg.c_str());
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "error", msg.c_str(), nullptr);
-    }
-    return result;
 }

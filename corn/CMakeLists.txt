@@ -27,6 +27,7 @@ add_executable(corn
     ../src/audio/samples.cpp
 )
 
+target_compile_options(corn PRIVATE -fexceptions)
 target_include_directories(corn PRIVATE ../src)
 target_include_directories(corn PRIVATE ../external)
 target_link_libraries(corn -static -fdiagnostics-color=always)

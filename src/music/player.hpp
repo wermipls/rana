@@ -524,6 +524,8 @@ class MusicPlayer {
 
     float master_volume = 1.0f;
 
+    const char *error_ = nullptr;
+
     void recalculateSamplesTick()
     {
         samples_tick = sr / (bpm / 60.0 * float(lines_beat * ticks_line));
@@ -532,6 +534,9 @@ class MusicPlayer {
 public:
     MusicPlayer(musfmt::Song song, float sr = 44100) : song{song}, sr{sr}, master{sr}
     {
+        // FIXME: just make a separate loadSong method so we can report errors nicer.
+        // player without a song loaded should still work, but producing silence.
+
         bpm = song.bpm;
         ticks_line = song.line_ticks;
         lines_beat = song.beat_lines;
@@ -540,11 +545,13 @@ public:
         recalculateSamplesTick();
 
         if (song.ins.size() < 1) {
-            throw std::invalid_argument("song must have at least one instrument");
+            error_ = "song has no instruments";
+            return;
         }
 
         if (song.ins[0].smp.size() < 1) {
-            throw std::invalid_argument("song must have at least one sample in the first instrument");
+            error_ = "instrument has no samples";
+            return;
         }
 
         for (auto &n : song.sampledata) {
@@ -560,8 +567,8 @@ public:
             }
 
             if (d == nullptr) {
-                log::err("failed to decode sample...");
-                abort();
+                error_ = "failed to decode sample";
+                return;
             }
             decoded_sample.push_back(d);
         }
@@ -591,6 +598,9 @@ public:
             master.addEffect(n);
         }
     }
+
+    [[nodiscard]] const char *error() const { return error_; }
+    [[nodiscard]] bool ok() const { return !error_; }
 
     void nextPattern()
     {
