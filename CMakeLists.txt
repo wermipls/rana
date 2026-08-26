@@ -18,8 +18,8 @@ set(BUILD_SHARED_LIBS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# no exceptions for main/library code.
-add_compile_options(-fno-exceptions)
+# no exceptions or rtti for main/library code.
+add_compile_options(-fno-exceptions -fno-rtti)
 
 add_library(rana_common INTERFACE)
 
