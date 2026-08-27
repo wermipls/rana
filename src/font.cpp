@@ -10,18 +10,18 @@
 namespace rana {
 namespace gfx {
 
-auto Font::load(const char *fn, float size_pt) -> expected<Font, err>
+auto Font::load(const char *fn, float size_pt) -> tl::expected<Font, std::string>
 {
     size_pt *= 2; // oversample
 
     std::vector<uint8_t> font_file;
     if (!fs::readfile(font_file, fn)) {
-        return unexpected("failed to read font file");
+        return tl::unexpected("failed to read font file");
     }
 
     stbtt_fontinfo info;
     if (!stbtt_InitFont(&info, font_file.data(), 0)) {
-        return unexpected("failed to init font info");
+        return tl::unexpected("failed to init font info");
     }
 
     stbtt_pack_context pc;
@@ -30,7 +30,7 @@ auto Font::load(const char *fn, float size_pt) -> expected<Font, err>
     std::vector<uint8_t> atlas(width*height);
 
     if (!stbtt_PackBegin(&pc, atlas.data(), width, height, 0, 1, nullptr)) {
-        return unexpected("pack begin fail");
+        return tl::unexpected("pack begin fail");
     }
 
     // fixme: assumes a single range.. not customizable
@@ -46,7 +46,7 @@ auto Font::load(const char *fn, float size_pt) -> expected<Font, err>
 
     if (!stbtt_PackFontRanges(&pc, font_file.data(), 0, &range, 1)) {
         stbtt_PackEnd(&pc);
-        return unexpected("failed to pack font ranges");
+        return tl::unexpected("failed to pack font ranges");
     }
     stbtt_PackEnd(&pc);
 

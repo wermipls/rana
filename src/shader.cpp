@@ -42,11 +42,11 @@ void main()
 )";
 
 // FIXME: code duplication
-static auto load_shader(const char *fn, ShaderType type) -> expected<uint32_t, err>
+static auto load_shader(const char *fn, ShaderType type) -> tl::expected<uint32_t, std::string>
 {
     std::vector<uint8_t> source;
     if (!fs::readfile(source, fn)) {
-        return unexpected("failed to load shader file");
+        return tl::unexpected("failed to load shader file");
     }
 
     auto id = glCreateShader(type);
@@ -63,13 +63,13 @@ static auto load_shader(const char *fn, ShaderType type) -> expected<uint32_t, e
         char info[512];
         glGetShaderInfoLog(id, sizeof(info), nullptr, info);
         glDeleteShader(id);
-        return unexpected(err("failed to compile shader:\n") + info);
+        return tl::unexpected(std::string("failed to compile shader:\n") + info);
     }
 
     return id;
 }
 
-static auto load_shader_string(const char *shader, ShaderType type) -> expected<uint32_t, err>
+static auto load_shader_string(const char *shader, ShaderType type) -> tl::expected<uint32_t, std::string>
 {
     auto id = glCreateShader(type);
 
@@ -83,13 +83,13 @@ static auto load_shader_string(const char *shader, ShaderType type) -> expected<
         char info[512];
         glGetShaderInfoLog(id, sizeof(info), nullptr, info);
         glDeleteShader(id);
-        return unexpected(err("failed to compile shader:\n") + info);
+        return tl::unexpected(std::string("failed to compile shader:\n") + info);
     }
 
     return id;
 }
 
-static auto load_shader_program(uint32_t vs, uint32_t fs) -> expected<uint32_t, err>
+static auto load_shader_program(uint32_t vs, uint32_t fs) -> tl::expected<uint32_t, std::string>
 {
     auto shaderprog = glCreateProgram();
     glAttachShader(shaderprog, vs);
@@ -104,52 +104,52 @@ static auto load_shader_program(uint32_t vs, uint32_t fs) -> expected<uint32_t, 
         char info[512];
         glGetProgramInfoLog(shaderprog, sizeof(info), nullptr, info);
         glDeleteProgram(shaderprog);
-        return unexpected(err("failed to link shader program: ") + info);
+        return tl::unexpected(std::string("failed to link shader program: ") + info);
     }
 
     return shaderprog;
 }
 
-static auto load_shader_program(const char *fn_vs, const char *fn_fs) -> expected<uint32_t, err>
+static auto load_shader_program(const char *fn_vs, const char *fn_fs) -> tl::expected<uint32_t, std::string>
 {
     auto vs = load_shader(fn_vs, ShaderType::Vertex);
     if (!vs) {
-        return unexpected(err("vertex shader: ") + vs.error());
+        return tl::unexpected(std::string("vertex shader: ") + vs.error());
     }
     auto fs = load_shader(fn_fs, ShaderType::Fragment);
     if (!fs) {
         glDeleteShader(*vs);
-        return unexpected(err("fragment shader: ") + vs.error());
+        return tl::unexpected(std::string("fragment shader: ") + vs.error());
     }
 
     return load_shader_program(*vs, *fs);
 }
 
-auto Shader::fromString(const char *vs_str, const char *fs_str) -> expected<Shader, err>
+auto Shader::fromString(const char *vs_str, const char *fs_str) -> tl::expected<Shader, std::string>
 {
     auto vs = load_shader_string(vs_str, ShaderType::Vertex);
     if (!vs) {
-        return unexpected(err("vertex shader: ") + vs.error());
+        return tl::unexpected(std::string("vertex shader: ") + vs.error());
     }
     auto fs = load_shader_string(fs_str, ShaderType::Fragment);
     if (!fs) {
         glDeleteShader(*vs);
-        return unexpected(err("fragment shader: ") + vs.error());
+        return tl::unexpected(std::string("fragment shader: ") + vs.error());
     }
 
     auto program = load_shader_program(*vs, *fs);
     if (!program) {
-        return unexpected(program.error());
+        return tl::unexpected(program.error());
     }
 
     return Shader(*program);
 }
 
-auto Shader::fromFile(const char *fn_vs, const char *fn_fs) -> expected<Shader, err>
+auto Shader::fromFile(const char *fn_vs, const char *fn_fs) -> tl::expected<Shader, std::string>
 {
     auto program = load_shader_program(fn_vs, fn_fs);
     if (!program) {
-        return unexpected(program.error());
+        return tl::unexpected(program.error());
     }
 
     return Shader(*program);

@@ -21,8 +21,8 @@ public:
     Shader(Shader&& a) : program_id{a.program_id} { a.program_id = 0; };
     Shader& operator=(Shader&& a) { program_id = a.program_id; a.program_id = 0; return *this; };
 
-    static auto fromString(const char *vs_str, const char *fs_str) -> expected<Shader, err>;
-    static auto fromFile(const char *fn_vs, const char *fn_fs) -> expected<Shader, err>;
+    static auto fromString(const char *vs_str, const char *fs_str) -> tl::expected<Shader, std::string>;
+    static auto fromFile(const char *fn_vs, const char *fn_fs) -> tl::expected<Shader, std::string>;
     static auto fallback() -> Shader;
 
     auto setUniform(const char *name, mat4 value) -> void;

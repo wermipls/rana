@@ -32,7 +32,7 @@ class Font {
     Font(Texture &t, glyph_map glyphs) : glyphs{glyphs}, tex{std::move(t)} { }
 public:
 
-    static auto load(const char *fn, float size_pt) -> expected<Font, err>;
+    static auto load(const char *fn, float size_pt) -> tl::expected<Font, std::string>;
 
     constexpr auto &texture() { return tex; }
     constexpr auto lineGap() { return _line_gap; }

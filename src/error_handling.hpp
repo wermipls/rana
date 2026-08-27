@@ -7,9 +7,6 @@
 
 namespace rana {
 
-using err = std::string;
-using namespace tl;
-
 class Exception : public std::exception {
     std::string msg;
     std::source_location location;
