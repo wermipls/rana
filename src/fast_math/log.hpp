@@ -1,10 +1,9 @@
 #pragma once
 
 #include <stdint.h>
-#include <float.h>
+#include <cmath>
 #ifndef DOCTEST_CONFIG_DISABLE
     #include <doctest.h>
-    #include <cmath>
     #include <numbers>
     #include <bit>
     #include "test_ulp.hpp"
@@ -44,7 +43,7 @@ static inline double log2(double x)
     if (x == INFINITY) return INFINITY;
 
     fp64 a;
-    a.d = __builtin_fabs(x);
+    a.d = std::fabs(x);
     int exp = int(a.fpr.exp) - 1023;
     a.fpr.exp = 1023;
 

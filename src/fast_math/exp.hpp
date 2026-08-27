@@ -3,10 +3,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <algorithm>
-#include <float.h>
+#include <cmath>
 #ifndef DOCTEST_CONFIG_DISABLE
     #include <doctest.h>
-    #include <cmath>
     #include <numbers>
     #include <bit>
     #include "test_ulp.hpp"
@@ -222,8 +221,8 @@ static inline double exp(double x)
     if (x == INFINITY) return INFINITY;
     if (x == -INFINITY) return 0;
 
-    const auto x_abs = __builtin_fabs(x);
-    const auto x_whole =  __builtin_floor(x_abs);
+    const auto x_abs = std::fabs(x);
+    const auto x_whole =  std::floor(x_abs);
     const auto x_frac = x_abs - x_whole;
     auto exp_pos = exp_frac(x_frac) * exp_whole[std::min<size_t>(710, x_whole)];
     auto exp_neg = 1.0 / exp_pos; // division is slow! maybe it's worth to extend the table.
