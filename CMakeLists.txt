@@ -130,6 +130,7 @@ target_link_libraries(rana_common INTERFACE SDL3::SDL3)
 # for some reason, SDL_LEAN_AND_MEAN cmake switch is only exposed for
 # the ngage build, so we have to set it like this
 sdl_compile_definitions(PRIVATE SDL_LEAN_AND_MEAN)
+sdl_compile_definitions(PRIVATE SDL_DISABLE_STB) # don't need two stb_image libs.
 
 # libopus
 if (NOT TARGET opus)
