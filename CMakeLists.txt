@@ -209,19 +209,35 @@ option(
     "Run the LuaJIT make unconditionally. Useful when making changes to the library. Disabled by default."
     OFF
 )
-ExternalProject_Add(luajit
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/LuaJIT/src"
-    BUILD_IN_SOURCE true
-    CONFIGURE_COMMAND make clean
-    BUILD_COMMAND make amalg BUILDMODE=static CC=${CMAKE_C_COMPILER}
-    INSTALL_COMMAND ""
-    BUILD_BYPRODUCTS "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a"
-    BUILD_ALWAYS ${LUAJIT_ALWAYS_BUILD}
-)
-add_library(LuaJIT INTERFACE)
-add_dependencies(LuaJIT luajit)
-target_include_directories(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src")
-target_link_libraries(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a")
+if(MSVC)
+    ExternalProject_Add(luajit
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/LuaJIT/src"
+        BUILD_IN_SOURCE true
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND msvcbuild.bat amalg static
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "${CMAKE_SOURCE_DIR}/LuaJIT/src/luajit.lib"
+        BUILD_ALWAYS ${LUAJIT_ALWAYS_BUILD}
+    )
+    add_library(LuaJIT INTERFACE)
+    add_dependencies(LuaJIT luajit)
+    target_include_directories(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src")
+    target_link_libraries(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src/lua51.lib")
+else()
+    ExternalProject_Add(luajit
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/LuaJIT/src"
+        BUILD_IN_SOURCE true
+        CONFIGURE_COMMAND make clean
+        BUILD_COMMAND make amalg BUILDMODE=static CC=${CMAKE_C_COMPILER}
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a"
+        BUILD_ALWAYS ${LUAJIT_ALWAYS_BUILD}
+    )
+    add_library(LuaJIT INTERFACE)
+    add_dependencies(LuaJIT luajit)
+    target_include_directories(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src")
+    target_link_libraries(LuaJIT INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT/src/libluajit.a")
+endif()
 
 target_include_directories(rana_common INTERFACE "${CMAKE_SOURCE_DIR}/LuaJIT")
 target_link_libraries(rana_common INTERFACE LuaJIT)
