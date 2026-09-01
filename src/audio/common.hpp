@@ -34,11 +34,22 @@ union SampleStereo {
 #ifdef RANA_SSE2
     __m128d v;
 
-    SampleStereo() : v(_mm_setzero_pd()) {}
-    SampleStereo(const double x) : v(_mm_set1_pd(x)) {}
-    SampleStereo(const __m128d &x) : v(x) {}
-    SampleStereo(const SampleStereo &x) : v(x.v) {}
-    SampleStereo(const double l, const double r) : v(_mm_setr_pd(l, r)) {}
+    // Apparently you can just mark the ctors as constexpr and it works on Clang 20+,
+    // since the intrinsics are constexpr. Not necessarily the case on other compilers,
+    // so we define some fallbacks instead, which seems wrong, but oh well.
+#if __clang_major__ >= 20
+    constexpr SampleStereo() : v(_mm_setzero_pd()) {}
+    constexpr SampleStereo(const double x) : v(_mm_set1_pd(x)) {}
+    constexpr SampleStereo(const __m128d &x) : v(x) {}
+    constexpr SampleStereo(const SampleStereo &x) : v(x.v) {}
+    constexpr SampleStereo(const double l, const double r) : v(_mm_setr_pd(l, r)) {}
+#else
+    constexpr SampleStereo() : v{0, 0} {}
+    constexpr SampleStereo(const double x) : v{x,x} {}
+    constexpr SampleStereo(const __m128d &x) : v(x) {}
+    constexpr SampleStereo(const SampleStereo &x) : v(x.v) {}
+    constexpr SampleStereo(const double l, const double r) : v{l,r} {}
+#endif
 
     SampleStereo &operator=(const SampleStereo &rhs) { v = rhs.v; return *this; }
 
@@ -52,10 +63,10 @@ union SampleStereo {
     SampleStereo &operator*=(const SampleStereo &rhs) { v = _mm_mul_pd(v, rhs.v); return *this; }
     SampleStereo &operator/=(const SampleStereo &rhs) { v = _mm_div_pd(v, rhs.v); return *this; }
 #else
-    SampleStereo() : l(), r() {}
-    SampleStereo(const double x) : l(x), r(x) {}
-    SampleStereo(const SampleStereo &x) : l(x.l), r(x.r) {}
-    SampleStereo(const double l, const double r) : l(l), r(r) {}
+    constexpr SampleStereo() : l(), r() {}
+    constexpr SampleStereo(const double x) : l(x), r(x) {}
+    constexpr SampleStereo(const SampleStereo &x) : l(x.l), r(x.r) {}
+    constexpr SampleStereo(const double l, const double r) : l(l), r(r) {}
 
     SampleStereo &operator=(const SampleStereo &rhs) { l = rhs.l; r = rhs.r; return *this; }
 
