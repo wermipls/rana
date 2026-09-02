@@ -243,10 +243,10 @@ public:
 
             cycle++;
             if (cycle == cycleEnd) { // hit the end point and we do a reverb sample
-                aI[countI] = inputSample + (feedbackA * regen);
-                aJ[countJ] = inputSample + (feedbackB * regen);
-                aK[countK] = inputSample + (feedbackC * regen);
-                aL[countL] = inputSample + (feedbackD * regen);
+                aI[countI] = inputSample + (SampleStereo(feedbackA.r, feedbackA.l) * regen);
+                aJ[countJ] = inputSample + (SampleStereo(feedbackB.r, feedbackB.l) * regen);
+                aK[countK] = inputSample + (SampleStereo(feedbackC.r, feedbackC.l) * regen);
+                aL[countL] = inputSample + (SampleStereo(feedbackD.r, feedbackD.l) * regen);
 
                 countI++;
                 if (countI < 0 || countI > delayI) countI = 0;
