@@ -29,6 +29,8 @@ class LinearRingBuf {
 public:
     const T &operator[](size_t i) const { return buf[i+offset]; }
 
+    static constexpr size_t size() { return sz; }
+
     void push(const T &v) { auto i = (offset + sz) & mask; buf[i] = v; buf[i+capacity/2] = v; offset = (offset+1) & mask; }
     void push(T &&v)      { auto i = (offset + sz) & mask; buf[i] = v; buf[i+capacity/2] = v; offset = (offset+1) & mask; }
 

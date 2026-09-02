@@ -29,6 +29,8 @@ public:
           T &operator[](size_t i)       { return buf[(i+offset) & mask]; }
     const T &operator[](size_t i) const { return buf[(i+offset) & mask]; }
 
+    static constexpr size_t size() { return sz; }
+
     void push(const T &v) { buf[(offset + sz) & mask] = v; offset++; }
     void push(T &&v)      { buf[(offset + sz) & mask] = v; offset++; }
 };
