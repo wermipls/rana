@@ -7,6 +7,7 @@
 #include <doctest.h>
 
 // all headers with tests.
+#include "audio/halfband.hpp"
 #include "containers/bitmask_ringbuf.hpp"
 #include "containers/linear_ringbuf.hpp"
 #include "serializer.hpp"
