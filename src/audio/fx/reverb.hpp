@@ -81,7 +81,7 @@ class Reverb : public Effect {
     };
 
     struct Allpass {
-        double feedback = 0;
+        double feedback = 0.5;
         std::unique_ptr<double[]> buf;
         unsigned int bufsize = 0;
         unsigned int bufidx = 0;
@@ -172,8 +172,8 @@ class Reverb : public Effect {
 
         /* init allpass buffers */
         for (int i = 0; i < NUMALLPASSES; i++) {
-            allpassl[i] = Allpass(combs[i] * multiplier);
-            allpassr[i] = Allpass((combs[i] + STEREOSPREAD) * multiplier);
+            allpassl[i] = Allpass(allpasses[i] * multiplier);
+            allpassr[i] = Allpass((allpasses[i] + STEREOSPREAD) * multiplier);
         }
 
         need_update = true;
@@ -190,11 +190,6 @@ class Reverb : public Effect {
 public:
     Reverb(float sample_rate = 44100) : sr{sample_rate}
     {
-        for (int i = 0; i < NUMALLPASSES; i++) {
-            allpassl[i].feedback = 0.5;
-            allpassr[i].feedback = 0.5;
-        }
-
         set_samplerate(sr);
         set_wet(INITIALWET);
         set_roomsize(INITIALROOM);
