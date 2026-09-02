@@ -7,6 +7,7 @@
 #include "fx/compressor2.hpp"
 #include "fx/delay.hpp"
 #include "fx/distortion.hpp"
+#include "fx/gain.hpp"
 #include "fx/galactic.hpp"
 #include "fx/reverb.hpp"
 #include "fx/singlepole.hpp"

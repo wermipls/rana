@@ -148,14 +148,12 @@ static inline SampleStereo floor(const SampleStereo a)
     return { std::floor(a.l), std::floor(a.r) };
 }
 
+// 0 -> full left, 1 -> full right.
 static inline SampleStereo pan_equal_power(float pan)
 {
-    pan += 1.f;
-    pan *= pi / 4;
-
     return SampleStereo{
-        std::sin(pan),
-        std::cos(pan)
+        sqrt2 * sqrt(1.0 - pan),
+        sqrt2 * sqrt(pan),
     };
 }
 
