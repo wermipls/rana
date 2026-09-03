@@ -6,6 +6,11 @@
 
 namespace rana::audio {
 
+// Reverb implementation based on Freeverb.
+// Specifically, it is based on rxi's C implementation.
+// https://gist.github.com/rxi/e5488c6660154329ddfc4a7a7d2997f8
+//
+// Original Freeverb by Jezar at Dreampoint
 class Reverb : public Effect {
     static constexpr auto paramCount = 7;
     const char *paramNames[paramCount] = {
