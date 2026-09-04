@@ -195,7 +195,7 @@ public:
             "ms",
             "",
         };
-        static_assert(_countof(labels) == paramCount);
+        static_assert(std::size(labels) == paramCount);
         return labels[index % paramCount];
     }
 #endif

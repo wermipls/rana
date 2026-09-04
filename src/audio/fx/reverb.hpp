@@ -164,8 +164,8 @@ class Reverb : public Effect {
 
         const int combs[] = { 1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617 };
         const int allpasses[] = { 556, 441, 341, 225 };
-        static_assert(_countof(combs) == NUMCOMBS);
-        static_assert(_countof(allpasses) == NUMALLPASSES);
+        static_assert(std::size(combs) == NUMCOMBS);
+        static_assert(std::size(allpasses) == NUMALLPASSES);
 
         double multiplier = value / INITIALSR;
 
