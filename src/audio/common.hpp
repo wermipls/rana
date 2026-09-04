@@ -215,7 +215,7 @@ static inline T fast_tanh(T x)
     return clamp(a / b, -1.0, 1.0);
 }
 
-// cutoff should be in range [0, sr].
+// cutoff should be in range [0, sr/2].
 static inline double factor_lowpass_single_pole(Hz cutoff, Hz sr)
 {
     // https://dsp.stackexchange.com/a/54088
