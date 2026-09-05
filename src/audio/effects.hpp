@@ -11,5 +11,6 @@
 #include "fx/gain.hpp"
 #include "fx/galactic.hpp"
 #include "fx/reverb.hpp"
+#include "fx/reverb2.hpp"
 #include "fx/singlepole.hpp"
 #include "fx/trancegate.hpp"
