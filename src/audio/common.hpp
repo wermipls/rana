@@ -198,6 +198,20 @@ static inline T fast_sin(const T x)
            (x + 3.14159265358979311599796346854 - 1.22464679914739511540935389571e-16) * u * x;
 }
 
+// Approximation of sin(x*pi) on [-1, 1].
+// Coefficients taken from https://mooooo.ooo/chebyshev-sine-approximation/
+static inline float fast_sinpi_f32(const float x)
+{
+    const float x2 = x * x;
+       float y =  0.000385937753182769f;
+    y = y * x2 + -0.006860187425683514f;
+    y = y * x2 +  0.0751872634325299f;
+    y = y * x2 + -0.5240361513980939f;
+    y = y * x2 +  2.0261194642649887f;
+    y = y * x2 + -3.1415926444234477f;
+    return (x - 1.f) * (x + 1.f) * y * x;
+}
+
 // approximates tanh(x).
 // Formula taken from https://yaikhom.com/2020-04-28-localised-approximation-of-hyperbolic-tangents.html
 // Estimated max error: 9.61e-5 at x=4.97179

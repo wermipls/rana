@@ -3,6 +3,7 @@
 #include "effect.hpp"
 #include "fx/biquad.hpp"
 #include "fx/bitcrush.hpp"
+#include "fx/chorus.hpp"
 #include "fx/compressor.hpp"
 #include "fx/compressor2.hpp"
 #include "fx/delay.hpp"
