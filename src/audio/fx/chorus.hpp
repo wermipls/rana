@@ -3,6 +3,7 @@
 #include "audio/common.hpp"
 #include "audio/effect.hpp"
 #include "containers/bitmask_ringbuf.hpp"
+#include "fast_math/sin.hpp"
 #include <cmath>
 
 namespace rana::audio {
@@ -99,7 +100,7 @@ public:
                     if (v.phase >= 1.0f) v.phase -= 2.0f;
                     float voice_delay = delay_samples * (voice_idx + 1) * (1.0f / n_voices);
                     float intensity = std::min<float>(intensity_scaled / speed, kRingBufSize - 2 - voice_delay);
-                    v.offset = float(kRingBufSize-1) - (1.0f + fast_sinpi_f32(v.phase)) / 2.0f * intensity - voice_delay;
+                    v.offset = float(kRingBufSize-1) - (1.0f + fmath::sinpi_f32(v.phase)) / 2.0f * intensity - voice_delay;
                 }
                 update_counter = kUpdateRateSamples;
             }

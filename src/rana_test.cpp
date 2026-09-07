@@ -14,3 +14,4 @@
 #include "fast_math/exp.hpp"
 #include "fast_math/log.hpp"
 #include "fast_math/pow.hpp"
+#include "fast_math/sin.hpp"

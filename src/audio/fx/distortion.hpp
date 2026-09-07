@@ -2,6 +2,7 @@
 
 #include "audio/effect.hpp"
 #include "audio/halfband.hpp"
+#include "fast_math/sin.hpp"
 #include <cmath>
 #include <span>
 #include <tracy/Tracy.hpp>
@@ -152,7 +153,7 @@ public:
             oversampler.for_each(range, [this, offset](auto smp) {
                 smp = bias(smp, offset);
                 auto x = min(1.0f, max(-1.0, smp * gain / sqrt2));
-                return fast_sin_halfpi(x);
+                return fmath::sin_halfpi(x);
             });
             break;
         case Tanh:

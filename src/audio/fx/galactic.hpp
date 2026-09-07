@@ -1,6 +1,7 @@
 #pragma once
 
 #include "audio/effect.hpp"
+#include "fast_math/sin.hpp"
 #include <cmath>
 #include <tracy/Tracy.hpp>
 #ifdef RANA_SUPERFLUOUS_VST_PARAMS
@@ -222,7 +223,7 @@ public:
             auto xr = vibM + pi / 2.0;
             if (xr > pi) xr -= pi * 2.0;
             auto x = SampleStereo(xl, xr);
-            auto sin_x = fast_sin(x);
+            auto sin_x = fmath::sin(x);
             auto offsetM = (sin_x + 1.0) * 127.0;
             int workingML = countM + offsetM.l;
             int workingMR = countM + offsetM.r;
