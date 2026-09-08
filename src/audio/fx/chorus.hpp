@@ -4,6 +4,7 @@
 #include "audio/effect.hpp"
 #include "containers/bitmask_ringbuf.hpp"
 #include "fast_math/sin.hpp"
+#include "fast_math/tanh.hpp"
 #include <cmath>
 
 namespace rana::audio {
@@ -121,7 +122,7 @@ public:
             lp += (in_fb - lp) * lp_coef;
             hp += (lp - hp) * hp_coef;
             const auto filtered = lp - hp;
-            rb.push(fast_tanh(filtered));
+            rb.push(fmath::tanh(filtered));
 
             SampleStereo ms = { sum.l + sum.r, sum.l - sum.r };
             ms.r *= param.width * 2.0;

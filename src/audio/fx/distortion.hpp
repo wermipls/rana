@@ -3,6 +3,7 @@
 #include "audio/effect.hpp"
 #include "audio/halfband.hpp"
 #include "fast_math/sin.hpp"
+#include "fast_math/tanh.hpp"
 #include <cmath>
 #include <span>
 #include <tracy/Tracy.hpp>
@@ -159,7 +160,7 @@ public:
         case Tanh:
             oversampler.for_each(range, [this, offset](auto smp) {
                 smp = bias(smp, offset);
-                return fast_tanh(smp * gain);
+                return fmath::tanh(smp * gain);
             });
             break;
         case Shape:

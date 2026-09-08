@@ -15,3 +15,4 @@
 #include "fast_math/log.hpp"
 #include "fast_math/pow.hpp"
 #include "fast_math/sin.hpp"
+#include "fast_math/tanh.hpp"

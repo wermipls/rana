@@ -164,23 +164,6 @@ static inline SampleStereo pan_equal_power(float pan)
     };
 }
 
-// approximates tanh(x).
-// Formula taken from https://yaikhom.com/2020-04-28-localised-approximation-of-hyperbolic-tangents.html
-// Estimated max error: 9.61e-5 at x=4.97179
-template <typename T>
-static inline T fast_tanh(T x)
-{
-    const auto x2 = x * x;
-    auto a = x2 + 378.0;
-    auto b = x2 * 28.0 + 3150.0;
-         a = x2 * a + 17325.0;
-         b = x2 * b + 62370.0;
-         a = x2 * a + 135135.0;
-         b = x2 * b + 135135.0;
-         a *= x;
-    return clamp(a / b, -1.0, 1.0);
-}
-
 // cutoff should be in range [0, sr/2].
 static inline double factor_lowpass_single_pole(Hz cutoff, Hz sr)
 {
