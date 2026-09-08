@@ -63,6 +63,9 @@ union SampleStereo {
     SampleStereo &operator-=(const SampleStereo &rhs) { v = _mm_sub_pd(v, rhs.v); return *this; }
     SampleStereo &operator*=(const SampleStereo &rhs) { v = _mm_mul_pd(v, rhs.v); return *this; }
     SampleStereo &operator/=(const SampleStereo &rhs) { v = _mm_div_pd(v, rhs.v); return *this; }
+
+    constexpr bool operator!=(const SampleStereo &rhs) const { return v[0] != rhs.v[0] && v[1] != rhs.v[1]; };
+    constexpr bool operator==(const SampleStereo &rhs) const { return v[0] == rhs.v[0] && v[1] == rhs.v[1]; };
 #else
     constexpr SampleStereo() : l(), r() {}
     constexpr SampleStereo(const double x) : l(x), r(x) {}
@@ -80,6 +83,9 @@ union SampleStereo {
     SampleStereo &operator-=(const SampleStereo &rhs) { *this = *this - rhs; return *this; }
     SampleStereo &operator*=(const SampleStereo &rhs) { *this = *this * rhs; return *this; }
     SampleStereo &operator/=(const SampleStereo &rhs) { *this = *this / rhs; return *this; }
+
+    constexpr bool operator!=(const SampleStereo &rhs) const { return l != rhs.l && r != rhs.r; };
+    constexpr bool operator==(const SampleStereo &rhs) const { return l == rhs.l && r == rhs.r; };
 #endif
 };
 
