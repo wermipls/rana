@@ -22,7 +22,7 @@ concept Serializable = requires(T a, Serializer &s) {
 class Serializer {
 protected:
     const char *error = nullptr;
-    bool reading;
+    const bool reading;
 
     Serializer(bool reading) : reading(reading) {}
 
