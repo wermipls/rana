@@ -37,7 +37,7 @@ class Chorus : public Effect {
         };
     } param;
 
-    static constexpr auto kUpdateRateSamples = 4;
+    static constexpr auto kUpdateRateSamples = 1;
     static constexpr auto kRingBufSize = 1024 * 32;
 
     BitmaskRingBuf<SampleStereo, kRingBufSize> rb = {}; // FIXME: replace with a proper delay line class
@@ -122,7 +122,7 @@ public:
             lp += (in_fb - lp) * lp_coef;
             hp += (lp - hp) * hp_coef;
             const auto filtered = lp - hp;
-            rb.push(fmath::tanh(filtered));
+            rb.push(filtered);
 
             SampleStereo ms = { sum.l + sum.r, sum.l - sum.r };
             ms.r *= param.width * 2.0;
