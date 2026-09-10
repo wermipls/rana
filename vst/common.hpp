@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include "audio/common.hpp"
 #define RANA_SUPERFLUOUS_VST_PARAMS
-#include "../src/audio/effects.hpp"
 
 #ifndef PLUGIN_VENDOR
     #define PLUGIN_VENDOR "default"
